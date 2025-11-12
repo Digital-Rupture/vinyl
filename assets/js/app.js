@@ -43,7 +43,7 @@ let currentFilters = {
 
 // Configuration and Paths
 const COLLECTION_PATH = 'records'; 
-const DATA_PATH = 'assets/json/initialcollection.json'; 
+const DATA_PATH = '/assets/json/initialcollection.json'; 
 
 // Firebase Configuration (MUST be provided by the environment)
 const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
