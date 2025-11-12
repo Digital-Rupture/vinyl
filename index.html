@@ -1,337 +1,61 @@
-// VETERAN CLASS NOTE: This script is now located at /assets/js/app.js.
-// The file's location has been updated to match the path structure your server requires.
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vinyl Collection Archiver | Modern Turntable Theme</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Embedding all styles here for better portability. */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+    
+    <!-- The previous link to 'assets/css/styles.css' has been removed to avoid dependency issues. -->
+</head>
+<body class="bg-gray-100 min-h-screen">
 
-// =================================================================
-// 1. SETUP & UTILITIES
-// =================================================================
+    <div id="message-box" class="message-box fixed top-4 right-4 z-50 p-3 rounded-lg shadow-xl hidden"></div>
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { 
-    getAuth, 
-    signInAnonymously, 
-    signInWithCustomToken, 
-    onAuthStateChanged 
-} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { 
-    getFirestore, 
-    collection, 
-    query, 
-    onSnapshot, 
-    doc, 
-    setLogLevel,
-    addDoc 
-} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-
-// Global state variables
-let db;
-let auth;
-let userId = null;
-let allRecords = [];
-let isAuthReady = false;
-
-// Configuration and Paths
-const COLLECTION_PATH = 'records'; 
-// FIX: Changed path to be relative to the main index.html file location (vynil/ folder)
-const DATA_PATH = 'assets/json/initialcollection.json'; 
-
-// Firebase Configuration (MUST be provided by the environment)
-const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
-const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-
-// Set Firebase logging level (useful for debugging during development)
-setLogLevel('debug');
-
-
-/**
- * Shows a message on the UI instead of using alert()
- * @param {HTMLElement} messageBox The DOM element for the message box.
- * @param {string} message The message to display.
- * @param {string} type The type of message (e.g., 'error', 'success').
- */
-function showMessage(messageBox, message, type = 'info') {
-    if (!messageBox) {
-        console.error(`[Message: ${type}] UI message box not available: ${message}`);
-        return;
-    }
-    console.log(`[Message: ${type}] ${message}`);
-    messageBox.textContent = message;
-    messageBox.className = `message-box bg-opacity-90 p-3 rounded-lg shadow-lg ${type === 'error' ? 'bg-red-500' : 'bg-blue-500'} text-white text-sm`;
-    messageBox.style.display = 'block';
-    // Hide the message after a delay
-    setTimeout(() => {
-        messageBox.style.display = 'none';
-    }, 5000);
-}
-
-/**
- * Utility function to determine color based on value (for the badge).
- * @param {number} value The current record value.
- * @returns {string} Tailwind CSS class for background color.
- */
-function getValueColor(value) {
-    if (value > 50) return 'bg-yellow-500';
-    if (value > 20) return 'bg-green-500';
-    return 'bg-gray-400';
-}
-
-/**
- * Generates an external image search URL for display purposes.
- * @param {string} artist The artist name.
- * @param {string} title The album title.
- * @returns {string} A placeholder image URL using the artist and title.
- */
-function getExternalImageUrl(artist, title) {
-    // Generate a simple text-based placeholder URL
-    const text = encodeURIComponent(`${artist} - ${title}`);
-    return `https://placehold.co/200x200/222/FFF?text=${text}&font=inter`;
-}
-
-// =================================================================
-// 2. CORE DISPLAY LOGIC
-// =================================================================
-
-/**
- * Creates the HTML structure for a single record card.
- * @param {Object} record The record data object.
- * @param {HTMLElement} messageBox The DOM element for the message box.
- * @returns {HTMLElement} The created card element.
- */
-function createRecordCard(record, messageBox) {
-    const card = document.createElement('div');
-    card.className = 'record-card bg-white rounded-xl shadow-xl overflow-hidden transform transition duration-300 hover:scale-[1.02] cursor-pointer';
-
-    const valueColor = getValueColor(record.current_value);
-    const formattedValue = new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: 'USD',
-        minimumFractionDigits: 2
-    }).format(record.current_value);
-
-    // Use the external image URL function
-    const imagePath = getExternalImageUrl(record.artist, record.title);
-
-    card.innerHTML = `
-        <div class="relative">
-            <img src="${imagePath}" alt="${record.artist} - ${record.title} Album Cover" class="album-cover w-full h-48 object-cover" onerror="this.onerror=null;this.src='https://placehold.co/200x200/111/444?text=NO+COVER';">
-            <span class="absolute top-2 right-2 ${valueColor} text-white text-xs font-bold px-3 py-1 rounded-full shadow-md transition duration-300 transform hover:scale-105">
-                ${formattedValue}
-            </span>
-        </div>
-        <div class="card-details p-4">
-            <h3 class="text-lg font-bold text-gray-900 truncate">${record.title}</h3>
-            <p class="text-sm text-gray-600 truncate mb-2">${record.artist}</p>
-            <div class="flex justify-between text-xs text-gray-500 mt-2">
-                <span>Year: ${record.release_year}</span>
-                <span>Format: ${record.format}</span>
+    <!-- Header / Navbar -->
+    <header class="bg-gray-900 text-white shadow-lg sticky top-0 z-10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col md:flex-row justify-between items-center">
+            <h1 class="text-3xl font-extrabold tracking-tight mb-2 md:mb-0">
+                <span class="text-yellow-400">Vinyl</span> Archiver
+            </h1>
+            <div class="flex items-center space-x-4 w-full md:w-auto">
+                <input type="text" id="search-input" placeholder="Search by Artist or Title..." 
+                       class="w-full md:w-64 p-2 rounded-lg text-gray-900 border border-gray-300 focus:ring-yellow-500 focus:border-yellow-500 transition duration-150">
+                <button id="filter-button" class="bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-bold py-2 px-4 rounded-lg shadow-md transition duration-150 transform hover:scale-105">
+                    Filter
+                </button>
             </div>
         </div>
-    `;
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:lg-8 pb-3 text-xs text-gray-400">
+             <div id="user-display" class="hidden"></div>
+        </div>
+    </header>
 
-    // Add a simple click handler to show details (using the message box as a non-alert demo)
-    card.addEventListener('click', () => {
-        showMessage(messageBox, `Viewing details for: ${record.artist} - ${record.title} (Catalog: ${record.catalog_number})`);
-    });
-
-    return card;
-}
-
-/**
- * Renders the filtered list of records to the grid.
- * @param {Array<Object>} recordsToRender The array of records to display.
- * @param {HTMLElement} recordGrid The grid container element.
- * @param {HTMLElement} noResultsMessage The no results message element.
- * @param {HTMLElement} messageBox The message box element.
- */
-function renderCollection(recordsToRender, recordGrid, noResultsMessage, messageBox) {
-    recordGrid.innerHTML = '';
-    if (recordsToRender.length === 0) {
-        noResultsMessage.style.display = 'block';
-        return;
-    }
-    noResultsMessage.style.display = 'none';
-    recordsToRender.forEach(record => {
-        recordGrid.appendChild(createRecordCard(record, messageBox));
-    });
-}
-
-/**
- * Fetches the initial JSON data from the repository for the first load.
- * @param {HTMLElement} messageBox The message box element.
- */
-async function fetchInitialData(messageBox) {
-    try {
-        const response = await fetch(DATA_PATH);
-        if (!response.ok) {
-            console.warn(`Could not find local data at ${DATA_PATH}. Status: ${response.status}`);
-            throw new Error(`Failed to fetch initial data: ${response.statusText}`);
-        }
-        const data = await response.json();
-        return data;
-    } catch (error) {
-        // This is where the error will be logged if the file path is wrong
-        showMessage(messageBox, `Error loading local data: ${error.message}. Please verify the file path ('${DATA_PATH}').`, 'error');
-        return [];
-    }
-}
-
-// =================================================================
-// 3. USER INTERACTION
-// =================================================================
-
-/**
- * Filters the collection based on the search input value (Artist or Title).
- * @param {HTMLElement} searchInput The search input element.
- * @param {HTMLElement} recordGrid The grid container element.
- * @param {HTMLElement} noResultsMessage The no results message element.
- * @param {HTMLElement} messageBox The message box element.
- */
-function handleSearch(searchInput, recordGrid, noResultsMessage, messageBox) {
-    const searchTerm = searchInput.value.toLowerCase().trim();
-
-    const filteredRecords = allRecords.filter(record => {
-        const artist = record.artist ? record.artist.toLowerCase() : '';
-        const title = record.title ? record.title.toLowerCase() : '';
-
-        return artist.includes(searchTerm) || title.includes(searchTerm);
-    });
-
-    renderCollection(filteredRecords, recordGrid, noResultsMessage, messageBox);
-}
-
-// =================================================================
-// 4. FIRESTORE INTEGRATION (Listen for Real-time Data)
-// =================================================================
-
-/**
- * Sets up a real-time listener for the user's collection in Firestore.
- * @param {HTMLElement} messageBox The message box element.
- * @param {HTMLElement} loadingIndicator The loading indicator element.
- * @param {HTMLElement} recordGrid The grid container element.
- * @param {HTMLElement} noResultsMessage The no results message element.
- */
-function setupFirestoreListener(messageBox, loadingIndicator, recordGrid, noResultsMessage) {
-    if (!db || !isAuthReady || !userId) {
-        console.warn("Firestore not ready or user not authenticated. Skipping listener setup.");
-        return;
-    }
-
-    // Path: /artifacts/{appId}/users/{userId}/records
-    const userRecordsRef = collection(db, 'artifacts', appId, 'users', userId, COLLECTION_PATH);
-    
-    const unsubscribe = onSnapshot(userRecordsRef, (snapshot) => {
-        const firestoreRecords = [];
-        snapshot.forEach((doc) => {
-            const data = doc.data();
-            // Ensure data structure matches expected record object
-            firestoreRecords.push({ id: doc.id, ...data });
-        });
-
-        if (firestoreRecords.length > 0) {
-             console.log(`Successfully loaded ${firestoreRecords.length} records from Firestore.`);
-             allRecords = firestoreRecords;
-        } else {
-             console.log("Firestore collection is empty. Displaying initial JSON data.");
-        }
+    <!-- Main Content Area -->
+    <main class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+        <div id="loading-indicator" class="text-center text-gray-600 my-8 hidden">
+            <div class="animate-spin inline-block w-8 h-8 border-4 border-yellow-500 border-t-transparent rounded-full"></div>
+            <p class="mt-2">Loading Vinyl Collection...</p>
+        </div>
         
-        loadingIndicator.style.display = 'none';
-        renderCollection(allRecords, recordGrid, noResultsMessage, messageBox);
+        <div id="no-results-message" class="text-center text-gray-600 my-8 hidden">
+             No records found matching your criteria. Try adjusting your search.
+        </div>
 
-    }, (error) => {
-        showMessage(messageBox, `Error loading real-time data: ${error.message}`, 'error');
-        console.error("Firestore listen error:", error);
-        loadingIndicator.style.display = 'none';
-        renderCollection(allRecords, recordGrid, noResultsMessage, messageBox); 
-    });
+        <!-- Record Grid -->
+        <div id="record-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+            <!-- Cards will be injected here by JavaScript -->
+        </div>
+    </main>
 
-    return unsubscribe;
-}
-
-/**
- * Initializes Firebase, authenticates, and starts the data listeners.
- */
-async function initApp() {
-    // Define DOM Element references here, after window.onload ensures they exist.
-    const recordGrid = document.getElementById('record-grid');
-    const searchInput = document.getElementById('search-input');
-    const messageBox = document.getElementById('message-box');
-    const userDisplay = document.getElementById('user-display');
-    const loadingIndicator = document.getElementById('loading-indicator');
-    const noResultsMessage = document.getElementById('no-results-message');
-    const filterButton = document.getElementById('filter-button'); // Get the filter button
-
-    if (!firebaseConfig) {
-        showMessage(messageBox, 'Error: Firebase configuration is missing.', 'error');
-        return;
-    }
-
-    try {
-        const app = initializeApp(firebaseConfig);
-        db = getFirestore(app);
-        auth = getAuth(app);
-        
-        allRecords = await fetchInitialData(messageBox);
-        renderCollection(allRecords, recordGrid, noResultsMessage, messageBox);
-        loadingIndicator.style.display = 'block';
-
-        onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                userId = user.uid;
-                userDisplay.textContent = `Current User ID: ${userId}`;
-                userDisplay.style.display = 'block';
-                isAuthReady = true;
-                setupFirestoreListener(messageBox, loadingIndicator, recordGrid, noResultsMessage);
-            } else {
-                try {
-                    if (initialAuthToken) {
-                        await signInWithCustomToken(auth, initialAuthToken);
-                    } else {
-                        await signInAnonymously(auth);
-                    }
-                } catch(e) {
-                    showMessage(messageBox, `Authentication failed: ${e.message}`, 'error');
-                }
-            }
-        });
-
-        // Setup event listeners
-        searchInput.addEventListener('keyup', () => 
-            handleSearch(searchInput, recordGrid, noResultsMessage, messageBox)
-        );
-
-        // TODO: Add Filter button listener here for the next step
-
-    } catch (error) {
-        showMessage(messageBox, `Failed to initialize application: ${error.message}`, 'error');
-        loadingIndicator.style.display = 'none';
-    }
-}
-
-// Start the application when the window loads
-window.onload = initApp;
-
-// =================================================================
-// 5. SAMPLE FUNCTION TO SAVE DATA (For Future Upload Feature)
-// =================================================================
-
-/**
- * Saves a new record to the user's private collection in Firestore.
- * @param {Object} record The record object to save.
- * @param {HTMLElement} messageBox The message box element.
- */
-async function saveRecord(record, messageBox) {
-    if (!db || !userId) {
-        showMessage(messageBox, 'Database not ready or user not signed in.', 'error');
-        return;
-    }
-    try {
-        // Path: /artifacts/{appId}/users/{userId}/records
-        const recordsRef = collection(db, 'artifacts', appId, 'users', userId, COLLECTION_PATH);
-        await addDoc(recordsRef, record);
-        showMessage(messageBox, 'Record successfully saved to Firestore!', 'success');
-    } catch (e) {
-        showMessage(messageBox, `Error adding document: ${e.message}`, 'error');
-        console.error("Error adding document: ", e);
-    }
-}
+    <!-- FIX: Updated path to reflect the new location of app.js -->
+    <script type="module" src="assets/js/app.js"></script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/vcd15cbe7772f49c399c6a5babf22c1241717689176015" integrity="sha512-ZpsOmlRQV6y907TI0dKBHq9Md29nnaEIPlkf84rnaERnq6zvWvPUqr2ft8M1aS28oN72PdrCzSjY4U6VaAw1EQ==" data-cf-beacon='{"version":"2024.11.0","token":"4d4808d7902a4148a658e2dbb61b496f","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+</body>
+</html>
