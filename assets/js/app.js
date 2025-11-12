@@ -32,7 +32,8 @@ let isAuthReady = false;
 
 // Configuration and Paths
 const COLLECTION_PATH = 'records'; 
-const DATA_PATH = '/vynil/assets/json/initialcollection.json'; 
+// FIX: Changed path to be relative to the main index.html file location (vynil/ folder)
+const DATA_PATH = 'assets/json/initialcollection.json'; 
 
 // Firebase Configuration (MUST be provided by the environment)
 const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
@@ -169,7 +170,8 @@ async function fetchInitialData(messageBox) {
         const data = await response.json();
         return data;
     } catch (error) {
-        showMessage(messageBox, `Error loading local data: ${error.message}. This might be normal if running locally or if the file path is incorrect.`, 'error');
+        // This is where the error will be logged if the file path is wrong
+        showMessage(messageBox, `Error loading local data: ${error.message}. Please verify the file path ('${DATA_PATH}').`, 'error');
         return [];
     }
 }
@@ -257,6 +259,7 @@ async function initApp() {
     const userDisplay = document.getElementById('user-display');
     const loadingIndicator = document.getElementById('loading-indicator');
     const noResultsMessage = document.getElementById('no-results-message');
+    const filterButton = document.getElementById('filter-button'); // Get the filter button
 
     if (!firebaseConfig) {
         showMessage(messageBox, 'Error: Firebase configuration is missing.', 'error');
@@ -296,6 +299,8 @@ async function initApp() {
         searchInput.addEventListener('keyup', () => 
             handleSearch(searchInput, recordGrid, noResultsMessage, messageBox)
         );
+
+        // TODO: Add Filter button listener here for the next step
 
     } catch (error) {
         showMessage(messageBox, `Failed to initialize application: ${error.message}`, 'error');
