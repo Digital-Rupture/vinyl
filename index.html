@@ -3,212 +3,728 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vinyl Archiver</title>
-    <!-- Load Tailwind CSS -->
+    <title>Individual Vinyl Archive Assistant</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Use Inter font family -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        :root {
+            --primary-color: #10b981; /* emerald-500 */
+            --secondary-color: #f59e0b; /* amber-500 */
+            --bg-color: #f3f4f6; /* gray-100 */
+        }
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f7f7f7;
-            min-height: 100vh;
+            background-color: var(--bg-color);
         }
-        /* Custom scrollbar for better aesthetics */
-        ::-webkit-scrollbar {
-            width: 8px;
+        .container-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+            padding: 1.5rem;
         }
-        ::-webkit-scrollbar-track {
-            background: #e0e0e0;
+        @media (min-width: 1024px) {
+            .container-grid {
+                grid-template-columns: 1fr 1fr;
+                gap: 2rem;
+            }
         }
-        ::-webkit-scrollbar-thumb {
-            background: #a0a0a0;
-            border-radius: 4px;
+        .card {
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+            padding: 1.5rem;
+            transition: all 0.2s;
         }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #808080;
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 0.75rem 1.25rem;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: background-color 0.15s ease-in-out;
         }
-        /* Style for the search input group */
-        .search-group input:focus {
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.5); /* Blue focus ring */
-            border-color: #3b82f6;
+        .btn-primary:hover {
+            background-color: #059669;
+        }
+        .list-item {
+            border-bottom: 1px solid #e5e7eb;
+            padding: 0.75rem 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .list-item:last-child {
+            border-bottom: none;
+        }
+        /* Modal Backdrop */
+        .modal-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 50;
+        }
+        /* Spinner CSS */
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
     </style>
 </head>
-<body class="p-4 md:p-8">
+<body>
 
-    <!-- Header and Controls -->
-    <header class="mb-8 max-w-6xl mx-auto">
-        <h1 class="text-4xl font-extrabold text-gray-900 mb-2">Vinyl Collection Archive</h1>
-        <p class="text-lg text-gray-600 mb-6">A centralized digital record of your cherished physical collection.</p>
-        
-        <div id="user-display" class="hidden text-xs font-mono bg-gray-100 p-2 rounded-lg mb-4"></div>
-
-        <div class="flex flex-col md:flex-row gap-4 mb-6">
-            <!-- Search Bar -->
-            <div class="search-group relative flex-grow">
-                <input 
-                    type="text" 
-                    id="search-input" 
-                    placeholder="Search by Artist or Album Title..."
-                    class="w-full p-3 pl-10 border border-gray-300 rounded-xl shadow-md transition duration-150 focus:outline-none"
-                />
-                <!-- Search Icon (Lucide-react fallback using inline SVG) -->
-                <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            </div>
-
-            <!-- Filter Button -->
-            <button id="filter-button" 
-                class="flex items-center justify-center gap-2 p-3 bg-gray-700 text-white font-semibold rounded-xl shadow-md hover:bg-gray-800 transition duration-150 transform hover:scale-105 active:scale-95"
-            >
-                <!-- Filter Icon -->
-                <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
-                Filter
+    <!-- Header / Navigation Bar -->
+    <header class="bg-white shadow-md p-4 flex justify-between items-center">
+        <h1 class="text-xl font-bold text-gray-800 flex items-center">
+            <i data-lucide="disc-3" class="w-6 h-6 mr-2 text-primary-color"></i>
+            Vinyl Archive for Veterans
+        </h1>
+        <div id="auth-controls" class="flex items-center space-x-3">
+            <span id="user-display" class="text-sm font-medium text-gray-700 hidden"></span>
+            <button id="sign-in-btn" class="btn-primary flex items-center hidden" onclick="signInWithGoogle()">
+                <i data-lucide="log-in" class="w-4 h-4 mr-1"></i>
+                Sign In
             </button>
-            
-            <!-- NEW: Add Record Button -->
-            <button id="add-record-button" 
-                class="flex items-center justify-center gap-2 p-3 bg-blue-600 text-white font-semibold rounded-xl shadow-md hover:bg-blue-700 transition duration-150 transform hover:scale-105 active:scale-95"
-            >
-                <!-- Plus Icon -->
-                <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                Add New Record
+            <button id="sign-out-btn" class="px-3 py-1 bg-red-100 text-red-600 font-semibold rounded-lg hover:bg-red-200 transition hidden" onclick="signOutUser()">
+                <i data-lucide="log-out" class="w-4 h-4 inline-block mr-1"></i>
+                Sign Out
             </button>
-
         </div>
     </header>
-
-    <!-- Message Box (Error/Success Notifications) -->
-    <div id="message-box" class="message-box fixed top-4 right-4 z-50 p-3 rounded-lg shadow-lg text-white hidden"></div>
-
-    <!-- Loading Indicator -->
-    <div id="loading-indicator" class="text-center py-12 text-lg text-gray-500 hidden">
-        <svg class="animate-spin h-8 w-8 text-gray-500 mx-auto mb-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-        </svg>
-        Loading collection data...
-    </div>
-
-    <!-- Main Content Grid -->
-    <main class="max-w-6xl mx-auto">
-        <div id="no-results-message" class="text-center py-12 text-lg text-gray-500 hidden">
-            No records found matching your criteria.
-        </div>
-        <div id="record-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            <!-- Record cards will be dynamically inserted here by JavaScript -->
-        </div>
-    </main>
-
-    <!-- Filter Modal (Hidden by default) -->
-    <div id="filter-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-40 p-4 transition-opacity duration-300">
-        <div class="bg-white rounded-xl p-6 w-full max-w-md shadow-2xl transform transition-all duration-300 scale-100">
-            <h2 class="text-2xl font-bold mb-4 text-gray-800">Filter Collection</h2>
-            
-            <!-- Filter Form -->
-            <div class="space-y-4">
-                <div>
-                    <label for="filter-format" class="block text-sm font-medium text-gray-700 mb-1">Format</label>
-                    <select id="filter-format" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
-                        <option value="">All Formats</option>
-                        <option value="LP">LP (33 RPM)</option>
-                        <option value="7">7" Single (45 RPM)</option>
-                        <option value="CD">CD</option>
-                        <option value="Digital">Digital</option>
-                    </select>
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Release Year Range</label>
-                    <div class="flex space-x-3">
-                        <input type="number" id="filter-year-from" placeholder="From (e.g., 1980)" min="1900" max="2099" class="w-1/2 p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"/>
-                        <input type="number" id="filter-year-to" placeholder="To (e.g., 2005)" min="1900" max="2099" class="w-1/2 p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"/>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Modal Actions -->
-            <div class="mt-6 flex justify-between space-x-3">
-                <button id="reset-filter-button" class="flex-grow p-2 bg-gray-200 text-gray-700 font-medium rounded-xl hover:bg-gray-300 transition duration-150">
-                    Reset Filters
-                </button>
-                <button id="apply-filter-button" class="flex-grow p-2 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition duration-150">
-                    Apply Filters
-                </button>
-                <button id="close-modal-button" class="p-2 bg-red-500 text-white font-semibold rounded-xl hover:bg-red-600 transition duration-150">
-                    Close
-                </button>
-            </div>
-        </div>
-    </div>
     
-    <!-- UPDATED: Add Record Modal -->
-    <div id="add-record-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-40 p-4 transition-opacity duration-300">
-        <div class="bg-white rounded-xl p-6 w-full max-w-lg shadow-2xl transform transition-all duration-300 scale-100">
-            <h2 class="text-2xl font-bold mb-4 text-gray-800">Add New Record to Collection</h2>
+    <!-- Sign-In Screen -->
+    <div id="sign-in-screen" class="p-6 pt-20 flex flex-col items-center justify-center min-h-[calc(100vh-6rem)] hidden">
+        <div class="card w-full max-w-md text-center p-8 space-y-6">
+            <i data-lucide="lock" class="w-12 h-12 mx-auto text-primary-color"></i>
+            <h2 class="text-2xl font-bold text-gray-800">Welcome, Veteran</h2>
+            <p class="text-gray-600">Please sign in with your Google account to securely access your personal vinyl record archive. Your data will be kept entirely private.</p>
+            <button id="google-sign-in-btn" class="w-full py-3 bg-blue-600 text-white font-semibold rounded-lg flex items-center justify-center space-x-2 hover:bg-blue-700 transition" onclick="signInWithGoogle()">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/4/4a/Logo-google.png" alt="Google Logo" class="w-5 h-5 bg-white rounded-full">
+                <span>Sign In with Google</span>
+            </button>
+            <p id="initial-loading-status" class="text-sm text-gray-500 mt-4">Initializing environment...</p>
+        </div>
+    </div>
+
+
+    <!-- Main Application Content (Hidden initially) -->
+    <div id="main-app-content" class="container-grid hidden">
+
+        <!-- Upload and Results Column -->
+        <div class="space-y-6">
             
-            <form id="add-record-form" class="space-y-4">
-                <!-- Artist Name -->
+            <!-- Image Upload Card -->
+            <div class="card space-y-4">
+                <h2 class="text-xl font-semibold text-gray-700 flex items-center">
+                    <i data-lucide="upload" class="w-5 h-5 mr-2 text-secondary-color"></i>
+                    1. Upload Album Cover
+                </h2>
+                <input type="file" id="image-upload" accept="image/*" class="w-full text-sm text-gray-500
+                    file:mr-4 file:py-2 file:px-4
+                    file:rounded-full file:border-0
+                    file:text-sm file:font-semibold
+                    file:bg-emerald-50 file:text-primary-color
+                    hover:file:bg-emerald-100
+                ">
+
+                <button id="process-btn" class="btn-primary w-full flex justify-center items-center" onclick="processImage()">
+                    <span id="btn-text">Extract Data & Securely Archive</span>
+                    <div id="btn-spinner" class="spinner ml-3 hidden"></div>
+                </button>
+            </div>
+
+            <!-- Real-time Results Card -->
+            <div class="card space-y-4">
+                <h2 class="text-xl font-semibold text-gray-700 flex items-center">
+                    <i data-lucide="brain" class="w-5 h-5 mr-2 text-primary-color"></i>
+                    2. AI Extraction Result
+                </h2>
+                <div id="extraction-result" class="text-gray-700 bg-gray-50 p-3 rounded-lg border border-gray-200 min-h-[50px] overflow-auto text-sm">
+                    Upload an image to extract record details.
+                </div>
+                <div id="image-preview" class="hidden max-w-full h-auto rounded-lg shadow-md border border-gray-300"></div>
+            </div>
+        </div>
+
+        <!-- Archived Records Column -->
+        <div class="space-y-6">
+            <h2 class="text-2xl font-bold text-gray-800 flex items-center">
+                <i data-lucide="archive" class="w-6 h-6 mr-2 text-secondary-color"></i>
+                Your Private Archived Records
+            </h2>
+            
+            <div class="card min-h-[300px]">
+                <div id="results-list" class="divide-y divide-gray-100">
+                    <!-- Records will be injected here -->
+                    <p id="list-placeholder" class="text-gray-500 text-center py-8">Loading your collection...</p>
+                </div>
+            </div>
+
+            <!-- New: Export Button -->
+            <button id="export-json-btn" class="btn-primary w-full flex justify-center items-center" onclick="exportRecordsToJson()">
+                <i data-lucide="download" class="w-5 h-5 mr-2"></i>
+                Export Collection to JSON
+            </button>
+        </div>
+    </div>
+
+    <!-- Edit Modal (Hidden by default) -->
+    <div id="edit-modal" class="modal-backdrop hidden" onclick="if(event.target.id === 'edit-modal') closeEditModal()">
+        <div class="bg-white p-6 rounded-xl w-11/12 max-w-lg shadow-2xl relative" onclick="event.stopPropagation()">
+            <h3 class="text-2xl font-bold mb-4 text-gray-800">Edit Record Data</h3>
+            <form id="edit-form" class="space-y-4">
                 <div>
-                    <label for="record-artist" class="block text-sm font-medium text-gray-700 mb-1 required">Artist Name</label>
-                    <input type="text" id="record-artist" required placeholder="e.g., Fleetwood Mac" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"/>
+                    <label for="edit-title" class="block text-sm font-medium text-gray-700">Album Title</label>
+                    <input type="text" id="edit-title" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border">
                 </div>
-
-                <!-- Album Title -->
                 <div>
-                    <label for="record-title" class="block text-sm font-medium text-gray-700 mb-1 required">Album Title</label>
-                    <input type="text" id="record-title" required placeholder="e.g., Rumours" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"/>
+                    <label for="edit-artist" class="block text-sm font-medium text-gray-700">Artist</label>
+                    <input type="text" id="edit-artist" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border">
                 </div>
-
-                <div class="grid grid-cols-2 gap-4">
-                    <!-- Release Year -->
-                    <div>
-                        <label for="record-year" class="block text-sm font-medium text-gray-700 mb-1 required">Release Year</label>
-                        <input type="number" id="record-year" required placeholder="e.g., 1977" min="1900" max="2099" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"/>
-                    </div>
-
-                    <!-- Format -->
-                    <div>
-                        <label for="record-format" class="block text-sm font-medium text-gray-700 mb-1 required">Format</label>
-                        <select id="record-format" required class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 bg-white">
-                            <option value="LP">LP (33 RPM)</option>
-                            <option value="7">7" Single (45 RPM)</option>
-                            <option value="CD">CD</option>
-                            <option value="Digital">Digital</option>
-                            <option value="Other">Other</option>
-                        </select>
-                    </div>
+                <div>
+                    <label for="edit-year" class="block text-sm font-medium text-gray-700">Release Year</label>
+                    <input type="number" id="edit-year" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border">
                 </div>
-
-                <div class="grid grid-cols-2 gap-4">
-                    <!-- Current Value -->
-                    <div>
-                        <label for="record-value" class="block text-sm font-medium text-gray-700 mb-1">Current Value (USD)</label>
-                        <input type="number" id="record-value" placeholder="e.g., 35.00" min="0" step="0.01" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"/>
-                    </div>
-
-                    <!-- Catalog Number -->
-                    <div>
-                        <label for="record-catalog" class="block text-sm font-medium text-gray-700 mb-1">Catalog Number</label>
-                        <input type="text" id="record-catalog" placeholder="e.g., BSK 3010" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"/>
-                    </div>
+                <div>
+                    <label for="edit-format" class="block text-sm font-medium text-gray-700">Media Format</label>
+                    <input type="text" id="edit-format" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border" placeholder="e.g., LP, 12-inch Single">
                 </div>
-
-                <!-- Modal Actions -->
-                <div class="mt-6 pt-4 border-t border-gray-200 flex justify-end space-x-3">
-                    <button type="button" id="close-add-modal-button" class="p-3 px-6 bg-gray-200 text-gray-700 font-semibold rounded-xl hover:bg-gray-300 transition duration-150">
+                <div class="flex justify-end space-x-3 pt-4">
+                    <button type="button" class="px-4 py-2 bg-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-300 transition" onclick="closeEditModal()">
                         Cancel
                     </button>
-                    <button type="submit" id="submit-record-button" class="p-3 px-6 bg-green-600 text-white font-semibold rounded-xl shadow-md hover:bg-green-700 transition duration-150 transform hover:scale-[1.02] active:scale-95">
-                        Save Record
+                    <button type="submit" class="btn-primary flex items-center">
+                        <span id="save-btn-text">Save Changes</span>
+                        <div id="save-btn-spinner" class="spinner ml-3 hidden h-5 w-5 border-t-white"></div>
                     </button>
                 </div>
             </form>
-
         </div>
     </div>
 
-    <!-- Load JavaScript Module -->
-    <script type="module" src="assets/js/app.js"></script>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInWithCustomToken, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, addDoc, updateDoc, onSnapshot, collection, getDocs, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- GLOBAL FIREBASE VARIABLES (Automatically provided by environment) ---
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        
+        // --- FIREBASE SERVICE INSTANCES & STATE ---
+        let app = null;
+        let db = null;
+        let auth = null;
+        let userId = null;
+        let unsubscribePrivate = null; 
+        let currentRecordsCache = []; // Global cache for current records
+        
+        const PRIVATE_COLLECTION_PATH = (appId, userId) => `artifacts/${appId}/users/${userId}/personal_vinyl_records`;
+
+        // Edit Modal State
+        const editModal = document.getElementById('edit-modal');
+        let currentRecordId = null; 
+
+        // --- AUTHENTICATION FUNCTIONS ---
+
+        /**
+         * Attempts to sign the user in using Google SSO (pop-up window).
+         */
+        window.signInWithGoogle = async function() {
+            try {
+                const provider = new GoogleAuthProvider();
+                // Prevent the button from being double-clicked
+                document.getElementById('google-sign-in-btn').disabled = true; 
+                await signInWithPopup(auth, provider);
+                // The onAuthStateChanged listener handles UI updates upon success.
+            } catch (error) {
+                console.error("Google Sign-In Failed:", error);
+                document.getElementById('initial-loading-status').textContent = "Sign in failed. Please try again or check console.";
+            } finally {
+                document.getElementById('google-sign-in-btn').disabled = false;
+            }
+        };
+
+        /**
+         * Signs the currently authenticated user out.
+         */
+        window.signOutUser = async function() {
+            if (unsubscribePrivate) {
+                unsubscribePrivate(); 
+                unsubscribePrivate = null;
+            }
+            try {
+                await signOut(auth);
+                // onAuthStateChanged handles the UI shift back to the sign-in screen
+            } catch (error) {
+                console.error("Sign Out Error:", error);
+            }
+        };
+
+        // --- UI MANAGEMENT ---
+
+        /**
+         * Updates the UI based on the authentication state.
+         * @param {Object} user The Firebase User object or null.
+         */
+        function updateUI(user) {
+            const signInScreen = document.getElementById('sign-in-screen');
+            const mainAppContent = document.getElementById('main-app-content');
+            const signInBtn = document.getElementById('sign-in-btn');
+            const signOutBtn = document.getElementById('sign-out-btn');
+            const userDisplay = document.getElementById('user-display');
+            
+            lucide.createIcons(); // Re-render icons after DOM manipulation
+
+            if (user) {
+                // USER IS LOGGED IN
+                userId = user.uid;
+                
+                // Show main application
+                signInScreen.classList.add('hidden');
+                mainAppContent.classList.remove('hidden');
+
+                // Update Header Controls
+                userDisplay.classList.remove('hidden');
+                userDisplay.textContent = `User: ${user.email || 'Anonymous'}`; // Show email if available
+                signInBtn.classList.add('hidden');
+                signOutBtn.classList.remove('hidden');
+                
+                // Start listening to the user's private collection
+                setupPrivateListener();
+            } else {
+                // USER IS LOGGED OUT
+                userId = null;
+                currentRecordsCache = []; // Clear cache
+                
+                // Show sign-in screen
+                signInScreen.classList.remove('hidden');
+                mainAppContent.classList.add('hidden');
+                document.getElementById('initial-loading-status').textContent = "Ready to sign in with Google.";
+
+                // Update Header Controls (Show Sign In, Hide User Info)
+                userDisplay.classList.add('hidden');
+                signInBtn.classList.remove('hidden');
+                signOutBtn.classList.add('hidden');
+
+                // Clear the list if it was previously populated
+                document.getElementById('results-list').innerHTML = '';
+                document.getElementById('list-placeholder').classList.remove('hidden');
+                document.getElementById('list-placeholder').textContent = "Sign in to view your archive.";
+            }
+        }
+
+
+        // --- CORE APPLICATION LOGIC (AI & FIREBASE) ---
+
+        /**
+         * Converts a File object to a Base64 encoded string.
+         */
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    const base64Data = reader.result.split(',')[1];
+                    resolve(base64Data);
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+        /**
+         * Calls the Gemini API to extract structured data from the image.
+         */
+        async function callGeminiVision(base64ImageData) {
+            const systemPrompt = "You are a specialized archivist AI. Your task is to analyze the provided image of a vinyl record cover and extract structured metadata. Identify the Album Title, Artist, Release Year, and Media Format (e.g., LP, 12-inch Single, etc.). Do not invent data. If a field is not visible, use 'Unknown'. Respond ONLY with a JSON array containing a single object that matches the requested schema.";
+
+            const userQuery = "Extract the Album Title, Artist, Release Year, and Media Format from this record cover image.";
+            const apiKey = ""; 
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+
+            const responseSchema = {
+                type: "ARRAY",
+                items: {
+                    type: "OBJECT",
+                    properties: {
+                        "album_title": { "type": "STRING", "description": "The title of the album." },
+                        "artist": { "type": "STRING", "description": "The main artist or band." },
+                        "release_year": { "type": "INTEGER", "description": "The likely release year." },
+                        "media_format": { "type": "STRING", "description": "The format (e.g., LP, 12-inch Single)." }
+                    },
+                    required: ["album_title", "artist", "release_year", "media_format"]
+                }
+            };
+            
+            const payload = {
+                contents: [{
+                    role: "user",
+                    parts: [
+                        { text: userQuery },
+                        {
+                            inlineData: {
+                                mimeType: "image/png", 
+                                data: base64ImageData
+                            }
+                        }
+                    ]
+                }],
+                systemInstruction: {
+                    parts: [{ text: systemPrompt }]
+                },
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    responseSchema: responseSchema
+                }
+            };
+
+            const maxRetries = 3;
+            for (let i = 0; i < maxRetries; i++) {
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(`API returned status ${response.status}: ${errorData.error.message}`);
+                    }
+
+                    const result = await response.json();
+                    
+                    if (result.candidates && result.candidates.length > 0 && result.candidates[0].content.parts.length > 0) {
+                        const jsonText = result.candidates[0].content.parts[0].text;
+                        const parsedData = JSON.parse(jsonText);
+                        
+                        if (Array.isArray(parsedData) && parsedData.length > 0) {
+                            return parsedData[0];
+                        }
+                    }
+                    throw new Error("API response was valid but contained no parsable data.");
+
+                } catch (error) {
+                    console.error(`Attempt ${i + 1} failed:`, error);
+                    if (i === maxRetries - 1) throw error; 
+                    const delay = Math.pow(2, i) * 1000;
+                    await new Promise(res => setTimeout(res, delay));
+                }
+            }
+        }
+
+        /**
+         * Main function to handle image upload, AI processing, and Firestore saving.
+         */
+        window.processImage = async function() {
+            const fileInput = document.getElementById('image-upload');
+            const resultDiv = document.getElementById('extraction-result');
+            
+            const btn = document.getElementById('process-btn');
+            const btnText = document.getElementById('btn-text');
+            const btnSpinner = document.getElementById('btn-spinner');
+            const imagePreview = document.getElementById('image-preview');
+
+            if (!fileInput.files.length) {
+                resultDiv.innerHTML = '<span class="text-secondary-color font-semibold">Please select an album cover image first!</span>';
+                return;
+            }
+            if (!userId) {
+                 resultDiv.innerHTML = '<span class="text-red-500 font-semibold">Error: Not signed in. Please sign in to archive records.</span>';
+                return;
+            }
+
+            const file = fileInput.files[0];
+            const mimeType = file.type;
+            
+            // Data path is now strictly determined by the logged-in userId
+            const collectionPath = PRIVATE_COLLECTION_PATH(appId, userId);
+            const collectionRef = collection(db, collectionPath);
+
+
+            // Show Loading State
+            btnText.textContent = 'Processing...';
+            btnSpinner.classList.remove('hidden');
+            btn.disabled = true;
+            resultDiv.textContent = `Analyzing image with AI and archiving to your private collection...`;
+
+            // Display Image Preview
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                imagePreview.innerHTML = `<img src="${e.target.result}" alt="Album Cover Preview" class="w-full h-auto rounded-lg">`;
+                imagePreview.classList.remove('hidden');
+            };
+            reader.readAsDataURL(file);
+
+            try {
+                const base64Data = await fileToBase64(file);
+                
+                // 1. Call Gemini for Structured Extraction
+                const extractedData = await callGeminiVision(base64Data);
+
+                // Add necessary metadata
+                const newRecord = {
+                    ...extractedData,
+                    archived_by: userId,
+                    collection_type: 'private', 
+                    timestamp: new Date().getTime(),
+                    mimeType: mimeType, 
+                    image_data: base64Data 
+                };
+
+                // 2. Save to Firestore
+                await addDoc(collectionRef, newRecord);
+                
+                resultDiv.innerHTML = `
+                    <span class="text-green-600 font-semibold">Success! Record Archived to Your Private Collection.</span>
+                    <pre class="mt-2 text-xs overflow-auto bg-white p-2 rounded">${JSON.stringify(extractedData, null, 2)}</pre>
+                `;
+            } catch (error) {
+                console.error("Processing failed:", error);
+                resultDiv.innerHTML = `<span class="text-red-600 font-semibold">Error during AI or Database operation.</span><p class="text-sm mt-1">${error.message}</p>`;
+            } finally {
+                // Reset UI state
+                btnText.textContent = 'Extract Data & Securely Archive';
+                btnSpinner.classList.add('hidden');
+                btn.disabled = false;
+                fileInput.value = ''; // Clear file input
+            }
+        }
+        
+        // --- REAL-TIME FIREBASE LISTENER ---
+        
+        /**
+         * Sets up the real-time listener for the private collection.
+         */
+        function setupPrivateListener() {
+            if (unsubscribePrivate) { unsubscribePrivate(); unsubscribePrivate = null; } // Cleanup old listener
+
+            if (!userId || !db) {
+                document.getElementById('list-placeholder').textContent = "Sign in to view your archive.";
+                return;
+            }
+
+            try {
+                document.getElementById('list-placeholder').textContent = "Loading records...";
+                const path = PRIVATE_COLLECTION_PATH(appId, userId);
+                const collectionRef = collection(db, path);
+                
+                const listenerCallback = (snapshot) => {
+                    const records = [];
+                    snapshot.forEach(doc => {
+                        records.push({ id: doc.id, ...doc.data(), collection_type: 'private' });
+                    });
+                    
+                    // Cache records and sort by timestamp newest first (in memory to avoid index issues)
+                    currentRecordsCache = records.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0)); 
+                    renderRecords(currentRecordsCache);
+                };
+                
+                const errorHandler = (error) => {
+                    console.error("Error listening to private Firestore collection:", error);
+                    document.getElementById('list-placeholder').textContent = "Error loading your private archive. Check console for details.";
+                };
+
+                // Attach the new listener and store the unsubscribe function
+                unsubscribePrivate = onSnapshot(collectionRef, listenerCallback, errorHandler);
+
+            } catch (error) {
+                console.error("Failed to set up listener:", error);
+            }
+        }
+        
+        /**
+         * Renders the list of records from Firestore in real-time.
+         */
+        function renderRecords(records) {
+            const list = document.getElementById('results-list');
+            const placeholder = document.getElementById('list-placeholder');
+            
+            if (records.length === 0) {
+                placeholder.classList.remove('hidden');
+                list.innerHTML = '';
+                placeholder.textContent = "Your private collection is currently empty. Upload your first record!";
+            } else {
+                placeholder.classList.add('hidden');
+                list.innerHTML = records.map(record => `
+                    <div class="list-item group transition-all duration-300 hover:bg-gray-50 px-2 -mx-2 rounded-lg">
+                        <div class="truncate pr-4">
+                            <p class="font-semibold text-gray-800 truncate">${record.album_title || 'Unknown Album'}</p>
+                            <p class="text-sm text-gray-500 truncate">
+                                ${record.artist || 'Unknown Artist'} (${record.release_year || 'N/A'})
+                            </p>
+                        </div>
+                        <!-- Pass the record ID and the JSON data to the editor -->
+                        <button class="text-sm font-medium px-3 py-1 bg-yellow-100 text-secondary-color rounded-full hover:bg-yellow-200 transition-colors flex-shrink-0" 
+                                onclick="openEditModal('${record.id}', '${escapeHtml(JSON.stringify(record))}')">
+                            Edit
+                        </button>
+                    </div>
+                `).join('');
+            }
+        }
+        
+        // --- EDITING LOGIC ---
+        
+        window.openEditModal = function(id, recordJson) {
+            try {
+                const record = JSON.parse(unescapeHtml(recordJson));
+                currentRecordId = id; 
+
+                document.getElementById('edit-title').value = record.album_title || '';
+                document.getElementById('edit-artist').value = record.artist || '';
+                document.getElementById('edit-year').value = record.release_year || '';
+                document.getElementById('edit-format').value = record.media_format || '';
+                
+                editModal.classList.remove('hidden');
+            } catch (error) {
+                console.error("Failed to parse record data for editing:", error);
+            }
+        }
+
+        window.closeEditModal = function() {
+            editModal.classList.add('hidden');
+            currentRecordId = null;
+        }
+
+        document.getElementById('edit-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            if (!currentRecordId || !db || !userId) return;
+            
+            const saveBtn = document.querySelector('#edit-form button[type="submit"]');
+            const saveBtnText = document.getElementById('save-btn-text');
+            const saveBtnSpinner = document.getElementById('save-btn-spinner');
+
+            saveBtnText.textContent = 'Saving...';
+            saveBtnSpinner.classList.remove('hidden');
+            saveBtn.disabled = true;
+
+            const updatedData = {
+                album_title: document.getElementById('edit-title').value,
+                artist: document.getElementById('edit-artist').value,
+                release_year: parseInt(document.getElementById('edit-year').value) || null,
+                media_format: document.getElementById('edit-format').value,
+                edited_at: new Date().getTime(), 
+            };
+            
+            try {
+                const path = PRIVATE_COLLECTION_PATH(appId, userId);
+                const collectionRef = collection(db, path);
+                const recordDocRef = doc(collectionRef, currentRecordId);
+                
+                await updateDoc(recordDocRef, updatedData);
+                
+                closeEditModal();
+            } catch (error) {
+                console.error("Error updating document:", error);
+                document.getElementById('extraction-result').innerHTML = '<span class="text-red-500 font-semibold">Error: Failed to save changes to archive.</span>';
+            } finally {
+                saveBtnText.textContent = 'Save Changes';
+                saveBtnSpinner.classList.add('hidden');
+                saveBtn.disabled = false;
+            }
+        });
+        
+        // --- EXPORT LOGIC (NEW) ---
+
+        /**
+         * Exports the user's cached records to a downloadable JSON file.
+         */
+        window.exportRecordsToJson = function() {
+            if (!currentRecordsCache || currentRecordsCache.length === 0) {
+                document.getElementById('extraction-result').innerHTML = '<span class="text-secondary-color font-semibold">Your archive is empty. Nothing to export!</span>';
+                return;
+            }
+
+            // Clean up data for export (remove internal fields like ID and base64 image data)
+            const cleanRecords = currentRecordsCache.map(record => {
+                const { id, image_data, archived_by, collection_type, ...cleanRecord } = record;
+                return cleanRecord;
+            });
+
+            const jsonString = JSON.stringify(cleanRecords, null, 2);
+            const blob = new Blob([jsonString], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `vinyl_archive_${userId || 'exported'}_${new Date().toISOString().slice(0, 10)}.json`;
+            
+            // Append to body, click, and remove
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+
+            // Notify user
+            document.getElementById('extraction-result').innerHTML = `<span class="text-green-600 font-semibold">Successfully exported ${cleanRecords.length} records to JSON!</span>`;
+        };
+        
+        // --- UTILITY FUNCTIONS ---
+        function escapeHtml(text) {
+            return text.replace(/'/g, '&apos;').replace(/"/g, '&quot;');
+        }
+        
+        function unescapeHtml(text) {
+            return text.replace(/&apos;/g, "'").replace(/&quot;/g, '"');
+        }
+
+        // --- INITIALIZATION ---
+
+        /**
+         * Initializes Firebase, performs the environment's required custom sign-in,
+         * and immediately sets up the onAuthStateChanged listener to control the UI.
+         */
+        async function initAuthAndFirestore() {
+            try {
+                // 1. Initialize Firebase services
+                app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+                // setLogLevel('error'); // REMOVED: Caused SyntaxError due to incorrect module export.
+
+                // 2. Set up Auth State Listener (CRITICAL: This determines the UI state)
+                onAuthStateChanged(auth, (user) => {
+                    updateUI(user);
+                });
+
+                // 3. Initial Sign-in Attempt (required by environment, ensures rules are met initially)
+                if (initialAuthToken) {
+                    document.getElementById('initial-loading-status').textContent = "Securing initial session...";
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    document.getElementById('initial-loading-status').textContent = "Establishing anonymous session...";
+                    // Use anonymous sign-in only if custom token isn't available
+                    const { signInAnonymously } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js");
+                    await signInAnonymously(auth); 
+                }
+
+            } catch (error) {
+                console.error("Firebase Initialization Error:", error);
+                document.getElementById('initial-loading-status').textContent = `Initialization Error. Please check console.`;
+            }
+        }
+        
+        window.onload = () => {
+            initAuthAndFirestore();
+            lucide.createIcons(); // Initial icon rendering
+        };
+    </script>
 </body>
 </html>
