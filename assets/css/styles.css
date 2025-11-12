@@ -1,0 +1,89 @@
+initialcollection.json:root {
+    /* --- The Modern Turntable Color Palette --- */
+    --color-background: #1A1A1A;     /* Deep charcoal / Near-black for the main body */
+    --color-surface: #262626;        /* Slightly lighter surface for cards/containers (The 'turntable' surface) */
+    --color-text-primary: #E0E0E0;   /* Light gray for main text, highly legible */
+    --color-text-secondary: #999999; /* Muted gray for small details, like artist names */
+    --color-accent-copper: #B87333;  /* Copper/Bronze for headings, buttons, and highlights */
+    --color-accent-teal: #00ADB5;    /* A secondary, sleek teal for interactive elements */
+
+    /* --- Semantic Colors (for the Value Indicator feature) --- */
+    --color-value-high: #D32F2F;     /* Red for high value */
+    --color-value-mid: #FFC107;      /* Yellow/Amber for mid value */
+    --color-value-low: #4CAF50;      /* Green for low value */
+
+    /* --- Typography Variables --- */
+    /* Using a geometric font (Poppins is a great, free choice) */
+    --font-heading: 'Poppins', sans-serif; 
+    --font-body: 'DM Sans', sans-serif;
+    --font-size-base: 16px;
+}
+/* Import Google Fonts - Poppins for headings, DM Sans for body */
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700&family=Poppins:wght@600;700&display=swap');
+
+* {
+    /* Basic CSS Reset */
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    /* Apply global theme variables */
+    background-color: var(--color-background);
+    color: var(--color-text-primary);
+    font-family: var(--font-body);
+    font-size: var(--font-size-base);
+    line-height: 1.6;
+    min-height: 100vh; /* Ensures the background covers the entire viewport */
+    padding: 2rem;
+}
+
+h1, h2, h3 {
+    font-family: var(--font-heading);
+    color: var(--color-accent-copper);
+    letter-spacing: 0.05em; /* A subtle spread for a modern look */
+    margin-bottom: 0.5em;
+}
+
+/* Ensure images scale correctly within their containers */
+img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+}
+/* --- APP LAYOUT --- */
+
+/* Main application container for centering and max-width */
+#app-container {
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+/* The Grid View for the Albums - critical for the "Modern Turntable" look */
+.album-grid {
+    display: grid;
+    /* Responsive Grid: 
+       - auto-fit ensures it fills the container.
+       - minmax ensures cards are at least 250px wide, up to 1 fraction of the space. */
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 30px; /* Space between the cards */
+    padding-top: 2rem;
+}
+
+/* Styling for an individual album card (where the cover will go) */
+.album-card {
+    background-color: var(--color-surface);
+    border-radius: 8px;
+    overflow: hidden;
+    /* Subtle shadow for depth (optional, but adds to the sleek theme) */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    cursor: pointer;
+}
+
+.album-card:hover {
+    /* Interactive hover effect */
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.6);
+}
