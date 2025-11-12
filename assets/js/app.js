@@ -1,14 +1,15 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. Define the path to the JSON data file.
+    
+    // --- GLOBAL VARIABLES ---
     const DATA_PATH = '/vynil/assets/json/initialcollection.json';
     const collectionGrid = document.getElementById('collection-grid');
+    const searchInput = document.getElementById('search-input');
+    let allRecords = []; // Variable to store the original, complete collection data
 
-    // 2. Function to determine the color for the Value Indicator based on price range
+    // --- UTILITY FUNCTIONS ---
+    
+    // 1. Value Color function (Unchanged from previous code)
     function getValueColor(low, high) {
-        // Simple logic for illustration: 
-        // High Value: > $40
-        // Mid Value: $20 to $40
-        // Low Value: < $20
         if (high > 40) {
             return 'var(--color-value-high)';
         } else if (low >= 20) {
@@ -18,18 +19,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // 3. Function to create the HTML element for a single record card
+    // 2. Card Creation function (Unchanged from previous code)
     function createRecordCard(record) {
-        // Create the main card container
         const card = document.createElement('div');
         card.classList.add('album-card');
         card.setAttribute('data-id', record.id);
-        
-        // Determine the image path (assuming images are stored by ID in the same assets folder)
-        // For a deployed app, you'd use a unique file name here.
-        const imagePath = `/vynil/assets/images/${record.id}.jpg`; 
-
-        // Get the value indicator color
+        const imagePath = `/vynil/assets/images/${record.id}.jpg`;
         const indicatorColor = getValueColor(record.estimated_value_low, record.estimated_value_high);
 
         card.innerHTML = `
@@ -42,37 +37,66 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             </div>
         `;
-        
         return card;
     }
 
-    // 4. Main function to fetch the data and render the collection
-    async function fetchAndRenderCollection() {
+    // 3. Rendering function (Re-usable for initial load and filtering)
+    function renderCollection(recordsToDisplay) {
+        collectionGrid.innerHTML = ''; // Clear existing content
+        
+        if (recordsToDisplay.length === 0) {
+             collectionGrid.innerHTML = '<p style="grid-column: 1 / -1; text-align: center; margin-top: 3rem; color: var(--color-text-secondary);">No records match your search criteria.</p>';
+        } else {
+            recordsToDisplay.forEach(record => {
+                const cardElement = createRecordCard(record);
+                collectionGrid.appendChild(cardElement);
+            });
+        }
+    }
+
+    // --- MAIN LOGIC ---
+
+    // 4. Function to handle filtering records based on search input
+    function handleSearch() {
+        const query = searchInput.value.toLowerCase().trim();
+
+        const filteredRecords = allRecords.filter(record => {
+            const artist = record.artist.toLowerCase();
+            const title = record.title.toLowerCase();
+
+            // Check if the query is included in either the artist or the title
+            return artist.includes(query) || title.includes(query);
+        });
+
+        // Re-render the grid with the filtered results
+        renderCollection(filteredRecords);
+    }
+
+    // 5. Initial Data Fetch and Setup
+    async function initApp() {
         try {
-            // Fetch the JSON file from the defined path
             const response = await fetch(DATA_PATH);
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
-            const collectionData = await response.json();
+            // Store the data in the global variable
+            allRecords = await response.json(); 
 
-            // Clear any placeholder content
-            collectionGrid.innerHTML = ''; 
-
-            // Iterate over the data and append each card to the grid
-            collectionData.forEach(record => {
-                const cardElement = createRecordCard(record);
-                collectionGrid.appendChild(cardElement);
-            });
-
-            console.log(`Successfully loaded and rendered ${collectionData.length} records.`);
+            // Initial render of the full collection
+            renderCollection(allRecords);
+            console.log(`Successfully loaded and rendered ${allRecords.length} records.`);
             
         } catch (error) {
             console.error("Could not fetch the collection data:", error);
-            collectionGrid.innerHTML = `<p style="color: var(--color-value-high);">Error loading data. Check console for details. Path: ${DATA_PATH}</p>`;
+            collectionGrid.innerHTML = `<p style="grid-column: 1 / -1; color: var(--color-value-high); text-align: center;">Error loading data. Check console for details. Path: ${DATA_PATH}</p>`;
         }
     }
-
-    // Execute the main function
-    fetchAndRenderCollection();
+    
+    // --- EVENT LISTENERS ---
+    
+    // Attach the search function to the input field
+    searchInput.addEventListener('keyup', handleSearch);
+    
+    // Run the initialization function
+    initApp();
 });
