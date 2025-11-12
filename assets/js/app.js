@@ -1,5 +1,8 @@
-// VETERAN CLASS NOTE: This script is now located at /vynil/assets/js/app.js.
-// The file's location has been updated to match the path structure your server requires.
+// VETERAN CLASS NOTE: This script is organized into three main sections:
+// 1. Setup & Utilities (Variables, Firebase, Helper Functions)
+// 2. Core Display Logic (Fetching Data and Rendering Cards)
+// 3. User Interaction (The Search Functionality)
+// This structure helps with maintainability and debugging!
 
 // =================================================================
 // 1. SETUP & UTILITIES
@@ -30,9 +33,16 @@ let userId = null;
 let allRecords = [];
 let isAuthReady = false;
 
+// New global state for filtering
+let currentFilters = {
+    format: '',
+    yearFrom: null,
+    yearTo: null,
+};
+
+
 // Configuration and Paths
 const COLLECTION_PATH = 'records'; 
-// FIX: Changed path to be relative to the main index.html file location (vynil/ folder)
 const DATA_PATH = 'assets/json/initialcollection.json'; 
 
 // Firebase Configuration (MUST be provided by the environment)
@@ -46,6 +56,7 @@ setLogLevel('debug');
 
 /**
  * Shows a message on the UI instead of using alert()
+ * FIX: Now requires the messageBox element to be passed, ensuring it is not null.
  * @param {HTMLElement} messageBox The DOM element for the message box.
  * @param {string} message The message to display.
  * @param {string} type The type of message (e.g., 'error', 'success').
@@ -94,6 +105,7 @@ function getExternalImageUrl(artist, title) {
 
 /**
  * Creates the HTML structure for a single record card.
+ * FIX: Now requires the messageBox element to be passed.
  * @param {Object} record The record data object.
  * @param {HTMLElement} messageBox The DOM element for the message box.
  * @returns {HTMLElement} The created card element.
@@ -138,26 +150,66 @@ function createRecordCard(record, messageBox) {
 }
 
 /**
- * Renders the filtered list of records to the grid.
- * @param {Array<Object>} recordsToRender The array of records to display.
+ * Renders the filtered list of records to the grid, applying both search and modal filters.
+ * @param {Array<Object>} sourceRecords The array of records to start filtering from (usually allRecords).
  * @param {HTMLElement} recordGrid The grid container element.
  * @param {HTMLElement} noResultsMessage The no results message element.
  * @param {HTMLElement} messageBox The message box element.
+ * @param {string} searchTerm The current search input value (optional).
  */
-function renderCollection(recordsToRender, recordGrid, noResultsMessage, messageBox) {
+function renderCollection(sourceRecords, recordGrid, noResultsMessage, messageBox, searchTerm = '') {
+    // 1. Start with the full list
+    let filteredRecords = sourceRecords;
+
+    // 2. Apply Search Filter
+    if (searchTerm) {
+        const lowerSearchTerm = searchTerm.toLowerCase().trim();
+        filteredRecords = filteredRecords.filter(record => {
+            const artist = record.artist ? record.artist.toLowerCase() : '';
+            const title = record.title ? record.title.toLowerCase() : '';
+            return artist.includes(lowerSearchTerm) || title.includes(lowerSearchTerm);
+        });
+    }
+
+    // 3. Apply Modal Filters (currentFilters)
+    filteredRecords = filteredRecords.filter(record => {
+        // Format Filter
+        if (currentFilters.format && record.format !== currentFilters.format) {
+            return false;
+        }
+
+        // Year From Filter
+        const recordYear = parseInt(record.release_year);
+        if (currentFilters.yearFrom && recordYear < currentFilters.yearFrom) {
+            return false;
+        }
+
+        // Year To Filter
+        if (currentFilters.yearTo && recordYear > currentFilters.yearTo) {
+            return false;
+        }
+
+        return true;
+    });
+
+    // 4. Render the final list
     recordGrid.innerHTML = '';
-    if (recordsToRender.length === 0) {
+    if (filteredRecords.length === 0) {
         noResultsMessage.style.display = 'block';
+        recordGrid.classList.add('hidden'); // Hide the grid if no results
         return;
     }
     noResultsMessage.style.display = 'none';
-    recordsToRender.forEach(record => {
+    recordGrid.classList.remove('hidden');
+
+    filteredRecords.forEach(record => {
         recordGrid.appendChild(createRecordCard(record, messageBox));
     });
 }
 
 /**
  * Fetches the initial JSON data from the repository for the first load.
+ * FIX: Now requires the messageBox element to be passed.
  * @param {HTMLElement} messageBox The message box element.
  */
 async function fetchInitialData(messageBox) {
@@ -170,8 +222,7 @@ async function fetchInitialData(messageBox) {
         const data = await response.json();
         return data;
     } catch (error) {
-        // This is where the error will be logged if the file path is wrong
-        showMessage(messageBox, `Error loading local data: ${error.message}. Please verify the file path ('${DATA_PATH}').`, 'error');
+        showMessage(messageBox, `Error loading local data: ${error.message}. This might be normal if running locally or if the file path is incorrect.`, 'error');
         return [];
     }
 }
@@ -181,24 +232,84 @@ async function fetchInitialData(messageBox) {
 // =================================================================
 
 /**
- * Filters the collection based on the search input value (Artist or Title).
+ * Triggers rendering with the current search term and filters.
  * @param {HTMLElement} searchInput The search input element.
  * @param {HTMLElement} recordGrid The grid container element.
  * @param {HTMLElement} noResultsMessage The no results message element.
  * @param {HTMLElement} messageBox The message box element.
  */
 function handleSearch(searchInput, recordGrid, noResultsMessage, messageBox) {
-    const searchTerm = searchInput.value.toLowerCase().trim();
-
-    const filteredRecords = allRecords.filter(record => {
-        const artist = record.artist ? record.artist.toLowerCase() : '';
-        const title = record.title ? record.title.toLowerCase() : '';
-
-        return artist.includes(searchTerm) || title.includes(searchTerm);
-    });
-
-    renderCollection(filteredRecords, recordGrid, noResultsMessage, messageBox);
+    const searchTerm = searchInput.value;
+    // renderCollection now handles all filtering
+    renderCollection(allRecords, recordGrid, noResultsMessage, messageBox, searchTerm);
 }
+
+/**
+ * Toggles the visibility of the filter modal.
+ * @param {HTMLElement} filterModal The modal container element.
+ */
+function toggleFilterModal(filterModal) {
+    filterModal.classList.toggle('hidden');
+}
+
+/**
+ * Reads the values from the filter modal, updates the global state, 
+ * closes the modal, and re-renders the collection.
+ * @param {HTMLElement} filterModal The modal container element.
+ * @param {HTMLElement} filterFormat The format select input.
+ * @param {HTMLElement} filterYearFrom The year from input.
+ * @param {HTMLElement} filterYearTo The year to input.
+ * @param {HTMLElement} recordGrid The grid container element.
+ * @param {HTMLElement} noResultsMessage The no results message element.
+ * @param {HTMLElement} messageBox The message box element.
+ * @param {HTMLElement} searchInput The search input element (to pass the search term).
+ */
+function applyFilters(filterModal, filterFormat, filterYearFrom, filterYearTo, recordGrid, noResultsMessage, messageBox, searchInput) {
+    
+    // Read and sanitize inputs
+    currentFilters.format = filterFormat.value;
+    
+    // Parse years as numbers, defaulting to null if not entered
+    const yearFrom = parseInt(filterYearFrom.value);
+    currentFilters.yearFrom = isNaN(yearFrom) ? null : yearFrom;
+    
+    const yearTo = parseInt(filterYearTo.value);
+    currentFilters.yearTo = isNaN(yearTo) ? null : yearTo;
+
+    // Validate year range
+    if (currentFilters.yearFrom && currentFilters.yearTo && currentFilters.yearFrom > currentFilters.yearTo) {
+        showMessage(messageBox, 'The "Year From" cannot be after the "Year To". Please correct your range.', 'error');
+        return; // Do not apply filter or close modal
+    }
+
+    // Close the modal
+    toggleFilterModal(filterModal);
+
+    // Re-render the collection with the new filters applied
+    renderCollection(allRecords, recordGrid, noResultsMessage, messageBox, searchInput.value);
+    
+    // Show confirmation
+    showMessage(messageBox, 'Filters applied successfully!', 'success');
+}
+
+
+/**
+ * Clears all filter inputs and resets the global filter state.
+ * @param {HTMLElement} filterFormat The format select input.
+ * @param {HTMLElement} filterYearFrom The year from input.
+ * @param {HTMLElement} filterYearTo The year to input.
+ * @param {HTMLElement} applyFilterButton The apply button (used to force a re-render).
+ */
+function resetFilters(filterFormat, filterYearFrom, filterYearTo, applyFilterButton) {
+    // Clear inputs
+    filterFormat.value = '';
+    filterYearFrom.value = '';
+    filterYearTo.value = '';
+    
+    // Clear global state and re-render by clicking the apply button
+    applyFilterButton.click();
+}
+
 
 // =================================================================
 // 4. FIRESTORE INTEGRATION (Listen for Real-time Data)
@@ -206,6 +317,7 @@ function handleSearch(searchInput, recordGrid, noResultsMessage, messageBox) {
 
 /**
  * Sets up a real-time listener for the user's collection in Firestore.
+ * FIX: Now requires all display elements to be passed.
  * @param {HTMLElement} messageBox The message box element.
  * @param {HTMLElement} loadingIndicator The loading indicator element.
  * @param {HTMLElement} recordGrid The grid container element.
@@ -252,16 +364,27 @@ function setupFirestoreListener(messageBox, loadingIndicator, recordGrid, noResu
  * Initializes Firebase, authenticates, and starts the data listeners.
  */
 async function initApp() {
-    // Define DOM Element references here, after window.onload ensures they exist.
+    // FIX 1: Define ALL DOM Element references here
     const recordGrid = document.getElementById('record-grid');
     const searchInput = document.getElementById('search-input');
     const messageBox = document.getElementById('message-box');
     const userDisplay = document.getElementById('user-display');
     const loadingIndicator = document.getElementById('loading-indicator');
     const noResultsMessage = document.getElementById('no-results-message');
-    const filterButton = document.getElementById('filter-button'); // Get the filter button
+    
+    // NEW Filter Modal Elements
+    const filterButton = document.getElementById('filter-button');
+    const filterModal = document.getElementById('filter-modal');
+    const closeModalButton = document.getElementById('close-modal-button');
+    const applyFilterButton = document.getElementById('apply-filter-button');
+    const resetFilterButton = document.getElementById('reset-filter-button');
+    const filterFormat = document.getElementById('filter-format');
+    const filterYearFrom = document.getElementById('filter-year-from');
+    const filterYearTo = document.getElementById('filter-year-to');
+
 
     if (!firebaseConfig) {
+        // FIX 2: Pass the messageBox element to showMessage
         showMessage(messageBox, 'Error: Firebase configuration is missing.', 'error');
         return;
     }
@@ -271,7 +394,9 @@ async function initApp() {
         db = getFirestore(app);
         auth = getAuth(app);
         
+        // FIX 3: Pass the messageBox element to fetchInitialData
         allRecords = await fetchInitialData(messageBox);
+        // Initial render without any filters
         renderCollection(allRecords, recordGrid, noResultsMessage, messageBox);
         loadingIndicator.style.display = 'block';
 
@@ -281,6 +406,7 @@ async function initApp() {
                 userDisplay.textContent = `Current User ID: ${userId}`;
                 userDisplay.style.display = 'block';
                 isAuthReady = true;
+                // FIX 4: Pass all display elements to the listener
                 setupFirestoreListener(messageBox, loadingIndicator, recordGrid, noResultsMessage);
             } else {
                 try {
@@ -290,19 +416,39 @@ async function initApp() {
                         await signInAnonymously(auth);
                     }
                 } catch(e) {
+                    // FIX 5: Pass the messageBox element to showMessage
                     showMessage(messageBox, `Authentication failed: ${e.message}`, 'error');
                 }
             }
         });
 
         // Setup event listeners
+        // FIX 6: Pass all necessary arguments to handleSearch
         searchInput.addEventListener('keyup', () => 
             handleSearch(searchInput, recordGrid, noResultsMessage, messageBox)
         );
 
-        // TODO: Add Filter button listener here for the next step
+        // NEW: Filter Modal Listeners
+        filterButton.addEventListener('click', () => toggleFilterModal(filterModal));
+        closeModalButton.addEventListener('click', () => toggleFilterModal(filterModal));
+        filterModal.addEventListener('click', (e) => {
+            // Close modal if user clicks outside the inner box
+            if (e.target.id === 'filter-modal') {
+                toggleFilterModal(filterModal);
+            }
+        });
+        
+        applyFilterButton.addEventListener('click', () => 
+            applyFilters(filterModal, filterFormat, filterYearFrom, filterYearTo, recordGrid, noResultsMessage, messageBox, searchInput)
+        );
+        
+        resetFilterButton.addEventListener('click', () => 
+            resetFilters(filterFormat, filterYearFrom, filterYearTo, applyFilterButton)
+        );
+
 
     } catch (error) {
+        // FIX 7: Pass the messageBox element to showMessage
         showMessage(messageBox, `Failed to initialize application: ${error.message}`, 'error');
         loadingIndicator.style.display = 'none';
     }
@@ -313,10 +459,12 @@ window.onload = initApp;
 
 // =================================================================
 // 5. SAMPLE FUNCTION TO SAVE DATA (For Future Upload Feature)
+// This function demonstrates how data would be saved to Firestore.
 // =================================================================
 
 /**
  * Saves a new record to the user's private collection in Firestore.
+ * FIX: Now requires the messageBox element to be passed.
  * @param {Object} record The record object to save.
  * @param {HTMLElement} messageBox The message box element.
  */
