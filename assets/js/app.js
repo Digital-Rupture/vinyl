@@ -43,7 +43,7 @@ const noResultsMessage = document.getElementById('no-results-message');
 // Configuration and Paths
 // NOTE: Since we are deploying to Cloudflare Pages, the paths are absolute from the root.
 const COLLECTION_PATH = 'records'; 
-const DATA_PATH = '/vynil/assets/json/initialcollection.json'; // Path for initial collection data
+const DATA_PATH = '/vinyl/assets/json/initialcollection.json'; // Path for initial collection data
 
 // Firebase Configuration (MUST be provided by the environment)
 const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
