@@ -3,460 +3,391 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vinyl Record Scanner</title>
-    <!-- Tailwind CSS CDN -->
+    <title>Modern Turntable Archive</title>
+    <!-- Load Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Inter Font -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-    <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        body { font-family: 'Inter', sans-serif; }
-        /* Style for the video feed and scan area */
-        #video-container {
-            position: relative;
-            width: 100%;
-            max-width: 600px;
-            aspect-ratio: 1 / 1; /* Keep a square aspect ratio for typical record covers */
-            margin: 0 auto;
-            border: 4px solid #10b981; /* Emerald border */
-            border-radius: 1rem;
-            overflow: hidden;
-            background-color: #1f2937; /* Dark background */
+        /* Custom styles for the 'Modern Turntable' theme */
+        :root {
+            --primary-color: #1a1a1a;
+            --secondary-color: #333333;
+            --accent-color: #fca311;
+            --text-color: #e5e5e5;
         }
-        #video-feed {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            transform: scaleX(-1); /* Often needed to mirror front-facing camera, adjust if using 'environment' */
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--primary-color);
+            color: var(--text-color);
         }
-        /* Custom message box style */
-        .message-box {
-            position: fixed;
-            top: 1rem;
-            right: 1rem;
-            z-index: 100;
-            transition: opacity 0.3s ease-in-out;
+
+        .card {
+            background-color: var(--secondary-color);
+            border: 1px solid var(--accent-color);
+            transition: transform 0.2s, box-shadow 0.2s;
         }
+
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.5);
+        }
+        
+        /* Utility for scrollable sidebar */
+        .sidebar {
+            height: 90vh; /* Adjust based on viewport height */
+            max-height: 90vh;
+        }
+        
+        /* Custom scrollbar for dark theme */
+        .sidebar::-webkit-scrollbar {
+            width: 8px;
+        }
+        .sidebar::-webkit-scrollbar-thumb {
+            background-color: var(--accent-color);
+            border-radius: 4px;
+        }
+        .sidebar::-webkit-scrollbar-track {
+            background-color: var(--secondary-color);
+        }
+
     </style>
 </head>
-<body class="bg-gray-900 text-white min-h-screen p-4 sm:p-8">
+<body class="min-h-screen p-4 sm:p-6 md:p-8">
 
-    <div class="max-w-4xl mx-auto">
+    <div id="app" class="max-w-7xl mx-auto">
+        <!-- Header -->
         <header class="text-center mb-8">
-            <h1 class="text-4xl font-bold text-emerald-400">VinylScan</h1>
-            <p class="text-gray-400">Scan your records with AI to quickly add them to your collection.</p>
+            <h1 class="text-4xl sm:text-5xl font-extrabold text-white mb-2 tracking-tight">
+                <span style="color: var(--accent-color);">Vinyl</span> Archive
+            </h1>
+            <p class="text-lg text-gray-400">The Complete Collection Catalog</p>
         </header>
 
-        <!-- Main Content Area -->
-        <div class="bg-gray-800 p-6 rounded-xl shadow-2xl">
-            <h2 class="text-2xl font-semibold mb-4 flex items-center text-gray-200">
-                <i data-lucide="scan-line" class="w-6 h-6 mr-2 text-emerald-400"></i>
-                Camera Scanner
-            </h2>
+        <!-- Main Layout: Sidebar (List) and Content (Detail) -->
+        <div class="flex flex-col lg:flex-row gap-6">
 
-            <!-- Video Feed / Scan Area -->
-            <div id="video-container" class="mb-6">
-                <video id="video-feed" autoplay playsinline></video>
-                <div id="loading-overlay" class="absolute inset-0 bg-gray-900/80 flex flex-col items-center justify-center hidden">
-                    <div class="animate-spin rounded-full h-12 w-12 border-b-4 border-emerald-500"></div>
-                    <p class="mt-4 text-emerald-300 font-semibold" id="loading-text">Starting camera...</p>
+            <!-- Sidebar: Album List & Search -->
+            <div class="lg:w-1/3 w-full">
+                <div class="card p-4 rounded-xl sidebar overflow-y-scroll flex flex-col">
+                    
+                    <!-- Search Input -->
+                    <div class="mb-4 sticky top-0 pt-1 pb-3 z-10" style="background-color: var(--secondary-color);">
+                        <input type="text" id="search-input" placeholder="Search by Artist, Album, or Genre..."
+                               class="w-full p-3 rounded-lg bg-gray-700 text-white placeholder-gray-400 focus:ring-2 focus:ring-accent-color focus:outline-none transition duration-150"
+                               oninput="handleSearch()">
+                    </div>
+
+                    <!-- Album List Container -->
+                    <div id="album-list" class="space-y-3">
+                        <!-- Album cards will be inserted here by JavaScript -->
+                        <div class="text-center p-8 text-gray-500">Initializing database connection...</div>
+                    </div>
+
                 </div>
             </div>
 
-            <!-- Controls and Status -->
-            <div class="flex flex-col sm:flex-row gap-4 mb-6">
-                <button id="scan-button" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-6 rounded-lg transition duration-200 shadow-md shadow-emerald-900 disabled:opacity-50" disabled>
-                    <span class="flex items-center justify-center">
-                        <i data-lucide="camera" class="w-5 h-5 mr-2"></i>
-                        Scan Record
-                    </span>
-                </button>
-                <button id="camera-toggle" class="sm:w-auto bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-6 rounded-lg transition duration-200 disabled:opacity-50">
-                    <span class="flex items-center justify-center">
-                        <i data-lucide="rotate-ccw" class="w-5 h-5 mr-2"></i>
-                        Toggle Camera
-                    </span>
-                </button>
+            <!-- Main Content Area: Detail View -->
+            <div class="lg:w-2/3 w-full">
+                <div id="detail-view" class="card p-6 rounded-xl flex items-center justify-center min-h-full" data-selected-id="undefined">
+                    <!-- Detail content will be inserted here by JavaScript -->
+                    <div class="text-center p-12">
+                        <svg class="w-16 h-16 mx-auto mb-4 text-accent-color" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v14m-6 3h6a2 2 0 002-2V5a2 2 0 00-2-2H9a2 2 0 00-2 2v14a2 2 0 002 2zm1-9h-2m-1 0h2v4h-2V10z"></path>
+                        </svg>
+                        <h2 class="text-2xl font-semibold mb-2">Select an Album</h2>
+                        <p class="text-gray-400">Use the list on the left to view album details, track listings, and archival notes.</p>
+                    </div>
+                </div>
             </div>
 
-            <!-- AI Result Display -->
-            <div id="result-display" class="bg-gray-700 p-4 rounded-lg hidden">
-                <h3 class="text-xl font-semibold mb-2 text-gray-100">AI Scan Result:</h3>
-                <div id="result-content">
-                    <p class="text-gray-300">Artist: <span id="artist-output" class="font-medium text-emerald-300"></span></p>
-                    <p class="text-gray-300">Album: <span id="album-output" class="font-medium text-emerald-300"></span></p>
-                    <p class="text-gray-300">Year: <span id="year-output" class="font-medium text-emerald-300"></span></p>
-                </div>
-                <button id="save-button" class="mt-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition duration-200 shadow-md disabled:opacity-50">
-                    <span class="flex items-center justify-center">
-                        <i data-lucide="save" class="w-4 h-4 mr-2"></i>
-                        Save to Collection
-                    </span>
-                </button>
-            </div>
-            
-            <p id="user-info" class="text-sm text-gray-500 mt-4">Auth Status: Connecting...</p>
         </div>
-
-        <!-- Hidden Elements -->
-        <canvas id="canvas-capture" class="hidden"></canvas>
+        
+        <!-- Status and Debug Info -->
+        <div class="mt-4 text-xs text-gray-600 text-center">
+             <p>User ID: <span id="user-id-display">Loading...</span> | App ID: <span id="app-id-display">Loading...</span></p>
+        </div>
     </div>
 
-    <!-- Message Box for Alerts -->
-    <div id="message-box" class="message-box bg-red-600 text-white p-3 rounded-lg shadow-xl hidden opacity-0"></div>
-
-    <!-- Firebase SDKs -->
+    <!-- JavaScript Logic -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, collection, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Set Firebase logging level for debugging
-        setLogLevel('debug');
+        // --- 1. GLOBALS & DATA ---
+        let records = []; 
+        let db = null;
+        let auth = null;
+        let userId = 'loading';
+        let isAuthReady = false;
 
-        // Global Firebase variables
-        let app, auth, db;
-        let userId = 'unknown';
+        // Global variables provided by the Canvas environment
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
-        // LLM Configuration
-        const MODEL_NAME = "gemini-2.5-flash-preview-09-2025";
-        const API_KEY = ""; // Canvas provides this dynamically
-
-        // UI Elements
-        const videoFeed = document.getElementById('video-feed');
-        const canvasCapture = document.getElementById('canvas-capture');
-        const scanButton = document.getElementById('scan-button');
-        const saveButton = document.getElementById('save-button');
-        const cameraToggle = document.getElementById('camera-toggle');
-        const loadingOverlay = document.getElementById('loading-overlay');
-        const loadingText = document.getElementById('loading-text');
-        const resultDisplay = document.getElementById('result-display');
-        const artistOutput = document.getElementById('artist-output');
-        const albumOutput = document.getElementById('album-output');
-        const yearOutput = document.getElementById('year-output');
-        const userInfo = document.getElementById('user-info');
-        const videoContainer = document.getElementById('video-container');
-        
-        let cameraStream = null;
-        let isFrontCamera = false;
-        let currentRecordData = null; // Store the data received from Gemini
-
-        // --- Utility Functions ---
-
-        /** Displays a temporary message box instead of using alert() */
-        function showMessage(message, isError = false) {
-            const box = document.getElementById('message-box');
-            box.textContent = message;
-            box.classList.remove('hidden', 'bg-red-600', 'bg-green-600');
-            box.classList.add(isError ? 'bg-red-600' : 'bg-green-600', 'opacity-100');
-            
-            setTimeout(() => {
-                box.classList.add('opacity-0');
-                setTimeout(() => box.classList.add('hidden'), 300);
-            }, 5000);
-        }
-
-        /** Converts an image URL to a Base64 string for the API */
-        function getBase64Image(canvas) {
-            // Resize the canvas to a reasonable size (e.g., 600x600) for efficiency and speed
-            const MAX_SIZE = 600;
-            const ctx = canvas.getContext('2d');
-            
-            const ratio = Math.min(MAX_SIZE / canvas.width, MAX_SIZE / canvas.height);
-            const newWidth = canvas.width * ratio;
-            const newHeight = canvas.height * ratio;
-
-            const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = newWidth;
-            tempCanvas.height = newHeight;
-            const tempCtx = tempCanvas.getContext('2d');
-            
-            // Draw the original image to the new, smaller canvas
-            tempCtx.drawImage(canvas, 0, 0, canvas.width, canvas.height, 0, 0, newWidth, newHeight);
-
-            // Return the base64 data URL
-            return tempCanvas.toDataURL('image/jpeg', 0.8).split(',')[1];
-        }
-
-        /** Retries the fetch operation with exponential backoff */
-        async function fetchWithRetry(url, options, maxRetries = 5) {
-            for (let i = 0; i < maxRetries; i++) {
-                try {
-                    const response = await fetch(url, options);
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    return response;
-                } catch (error) {
-                    if (i === maxRetries - 1) throw error;
-                    const delay = Math.pow(2, i) * 1000 + Math.random() * 1000;
-                    // console.debug(`Fetch failed, retrying in ${delay / 1000}s...`, error.message);
-                    await new Promise(resolve => setTimeout(resolve, delay));
-                }
-            }
+        // Path to the public collection (shared data)
+        function getCollectionRef(dbInstance) {
+            // Using the public collection for a shared catalog view
+            return collection(dbInstance, `artifacts/${appId}/public/data/vinyl_catalog`);
         }
         
-        // --- Camera Functions ---
-
-        /** Initializes the camera stream */
-        async function initCamera(isFront) {
-            if (cameraStream) {
-                cameraStream.getTracks().forEach(track => track.stop());
-            }
-
-            // Show loading
-            loadingOverlay.classList.remove('hidden');
-            loadingText.textContent = "Requesting camera access...";
-            scanButton.disabled = true;
-
+        // --- 2. FIREBASE & AUTH SETUP (Mandatory for Persistence) ---
+        async function initializeFirebase() {
             try {
-                // Determine which camera to request
-                const videoConstraints = {
-                    facingMode: isFront ? "user" : "environment"
-                };
-
-                cameraStream = await navigator.mediaDevices.getUserMedia({ video: videoConstraints });
-                videoFeed.srcObject = cameraStream;
-                videoFeed.onloadedmetadata = () => {
-                    videoFeed.play();
-                    loadingOverlay.classList.add('hidden');
-                    scanButton.disabled = false;
-                    
-                    // Adjust mirroring based on camera
-                    videoFeed.style.transform = isFront ? 'scaleX(-1)' : 'scaleX(1)';
-                    showMessage("Camera feed ready! Hold a record cover in view.");
-                };
-            } catch (err) {
-                loadingOverlay.classList.add('hidden');
-                console.error("Error accessing camera:", err);
-                showMessage("Could not access camera. Please check permissions.", true);
-            }
-        }
-        
-        cameraToggle.addEventListener('click', () => {
-            isFrontCamera = !isFrontCamera;
-            initCamera(isFrontCamera);
-        });
-
-        // --- Core Scanning Logic ---
-
-        /** Executes the full scan sequence: Capture -> API Call -> Display */
-        async function scanRecord() {
-            // 1. Capture Image
-            const videoRatio = videoFeed.videoWidth / videoFeed.videoHeight;
-            const containerWidth = videoContainer.clientWidth;
-            
-            // Set canvas size to match the container width/height
-            canvasCapture.width = containerWidth;
-            canvasCapture.height = containerWidth; 
-
-            // Calculate draw parameters to crop/fit the video feed into the square canvas
-            const ctx = canvasCapture.getContext('2d');
-            let sx, sy, sWidth, sHeight;
-            
-            if (videoRatio > 1) { // Landscape video
-                sHeight = videoFeed.videoHeight;
-                sWidth = videoFeed.videoHeight;
-                sx = (videoFeed.videoWidth - sWidth) / 2;
-                sy = 0;
-            } else { // Portrait video
-                sWidth = videoFeed.videoWidth;
-                sHeight = videoFeed.videoWidth;
-                sx = 0;
-                sy = (videoFeed.videoHeight - sHeight) / 2;
-            }
-            
-            ctx.drawImage(videoFeed, sx, sy, sWidth, sHeight, 0, 0, containerWidth, containerWidth);
-
-            const base64Image = getBase64Image(canvasCapture);
-            
-            // 2. API Call Setup
-            scanButton.disabled = true;
-            loadingOverlay.classList.remove('hidden');
-            loadingText.textContent = "Analyzing record cover with AI...";
-            resultDisplay.classList.add('hidden');
-
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${API_KEY}`;
-            
-            const userQuery = "Identify the artist, album title, and primary release year from this vinyl record cover image. Return only a JSON object.";
-            const systemPrompt = "You are a specialized music cataloging AI. Analyze the provided image of a record cover and extract the Artist, Album Title, and Release Year. You MUST return the result as a single JSON array containing one object with the keys 'artist', 'album', and 'year'. Ensure the year is a number.";
-
-            const payload = {
-                contents: [
-                    {
-                        role: "user",
-                        parts: [
-                            { text: userQuery },
-                            {
-                                inlineData: {
-                                    mimeType: "image/jpeg",
-                                    data: base64Image
-                                }
-                            }
-                        ]
-                    }
-                ],
-                // Use search grounding to ensure accuracy against real-world data
-                tools: [{ "google_search": {} }],
-                systemInstruction: {
-                    parts: [{ text: systemPrompt }]
-                },
-                generationConfig: {
-                    responseMimeType: "application/json",
-                    responseSchema: {
-                        type: "ARRAY",
-                        items: {
-                            type: "OBJECT",
-                            properties: {
-                                "artist": { "type": "STRING", "description": "The main recording artist or band." },
-                                "album": { "type": "STRING", "description": "The album title." },
-                                "year": { "type": "NUMBER", "description": "The primary release year of the album, as an integer." }
-                            },
-                            "propertyOrdering": ["artist", "album", "year"]
-                        }
-                    }
-                }
-            };
-            
-            // 3. Execute API Call
-            try {
-                const response = await fetchWithRetry(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                const result = await response.json();
+                // Set debug level for logs
+                setLogLevel('Debug');
                 
-                // Extract and parse JSON text
-                const jsonText = result.candidates?.[0]?.content?.parts?.[0]?.text;
-                if (!jsonText) throw new Error("AI failed to return structured data.");
-                
-                const parsedResultArray = JSON.parse(jsonText);
-                const record = parsedResultArray[0];
-
-                if (!record || !record.artist || !record.album) {
-                    throw new Error("AI returned invalid or incomplete data.");
-                }
-
-                currentRecordData = {
-                    artist: record.artist,
-                    album: record.album,
-                    year: record.year || 'Unknown',
-                    scannedAt: new Date().toISOString()
-                };
-                
-                // 4. Display Results
-                artistOutput.textContent = currentRecordData.artist;
-                albumOutput.textContent = currentRecordData.album;
-                yearOutput.textContent = currentRecordData.year;
-                
-                loadingOverlay.classList.add('hidden');
-                resultDisplay.classList.remove('hidden');
-                saveButton.disabled = false;
-                showMessage("Scan successful! Review the details before saving.");
-
-            } catch (error) {
-                console.error("Scan Error:", error);
-                loadingText.textContent = "Scan Failed";
-                showMessage(`Error scanning record: ${error.message}. Please try again.`, true);
-                loadingOverlay.classList.add('hidden');
-                scanButton.disabled = false;
-            } finally {
-                scanButton.disabled = false;
-            }
-        }
-        
-        scanButton.addEventListener('click', scanRecord);
-
-
-        // --- Firestore Functions ---
-
-        /** Saves the identified record to the user's collection in Firestore */
-        async function saveRecord() {
-            if (!currentRecordData || !userId) {
-                showMessage("Cannot save: Authentication or record data missing.", true);
-                return;
-            }
-            
-            saveButton.disabled = true;
-            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-            
-            // Define the public collection path
-            const recordsCollectionRef = collection(db, `artifacts/${appId}/public/data/records`);
-
-            try {
-                // Add the new document with the scanned data
-                await setDoc(doc(recordsCollectionRef), {
-                    ...currentRecordData,
-                    userId: userId, // Record who scanned it
-                });
-
-                showMessage(`Successfully saved "${currentRecordData.album}" to collection!`);
-                
-                // Clear state
-                currentRecordData = null;
-                resultDisplay.classList.add('hidden');
-            } catch (e) {
-                console.error("Error saving document: ", e);
-                showMessage("Failed to save record to database.", true);
-            } finally {
-                saveButton.disabled = false;
-            }
-        }
-        
-        saveButton.addEventListener('click', saveRecord);
-
-
-        // --- Firebase Initialization ---
-
-        function initFirebase() {
-            try {
-                const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-                app = initializeApp(firebaseConfig);
-                auth = getAuth(app);
+                const app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
+                auth = getAuth(app);
                 
-                // 1. Listen for Auth State Change
-                onAuthStateChanged(auth, (user) => {
+                document.getElementById('app-id-display').textContent = appId;
+
+
+                // Listen for Auth State Changes
+                onAuthStateChanged(auth, async (user) => {
                     if (user) {
                         userId = user.uid;
-                        userInfo.textContent = `User ID: ${userId} | Status: Ready`;
-                        // Start the camera once authentication is established
-                        initCamera(isFrontCamera);
                     } else {
-                        // User is signed out, or initial sign-in failed
-                        userInfo.textContent = `User ID: Not Signed In | Status: Waiting...`;
+                        // Sign in if not authenticated (or if a token was provided and failed, though unlikely)
+                         if (initialAuthToken) {
+                            await signInWithCustomToken(auth, initialAuthToken);
+                        } else {
+                            await signInAnonymously(auth);
+                        }
+                        // Re-run onAuthStateChanged after sign-in attempt
+                        return; 
                     }
+                    
+                    isAuthReady = true;
+                    document.getElementById('user-id-display').textContent = userId;
+                    console.log("Firebase Auth Ready. User ID:", userId);
+                    
+                    // Once Auth is ready, load the data
+                    loadRecords();
                 });
-
-                // 2. Perform Initial Sign-in
-                const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-
-                if (initialAuthToken) {
-                    signInWithCustomToken(auth, initialAuthToken)
-                        .catch(error => {
-                            console.error("Custom token sign-in failed:", error);
-                            signInAnonymously(auth).catch(e => console.error("Anonymous sign-in failed:", e));
-                        });
-                } else {
-                    signInAnonymously(auth).catch(e => console.error("Anonymous sign-in failed:", e));
+                
+                // Initial check for custom token sign-in
+                if (initialAuthToken && !auth.currentUser) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else if (!auth.currentUser) {
+                    await signInAnonymously(auth);
                 }
 
+
             } catch (error) {
-                console.error("Firebase initialization failed:", error);
-                userInfo.textContent = "Auth Status: Error (Check console)";
-                showMessage("Critical Error: Firebase failed to initialize.", true);
+                console.error("Error initializing Firebase:", error);
+                document.getElementById('album-list').innerHTML = `<div class="p-4 text-red-400">Error setting up Firebase: ${error.message}</div>`;
+            }
+        }
+        
+        // Load data using Firestore (Real-time listener)
+        function loadRecords() {
+            if (!isAuthReady || !db) {
+                console.warn("Firestore not ready. Cannot load records.");
+                return;
+            }
+
+            const recordsRef = getCollectionRef(db);
+            
+            // Set up real-time listener
+            onSnapshot(recordsRef, (snapshot) => {
+                const newRecords = [];
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    newRecords.push({ id: doc.id, ...data });
+                });
+                // Sort records by artist name for consistent viewing
+                records = newRecords.sort((a, b) => (a.artist || "").localeCompare(b.artist || ""));
+                
+                console.log("Records loaded:", records.length);
+                // Initial render or update based on search
+                handleSearch(); 
+
+                // Check if a record was previously selected and display it again
+                const detailView = document.getElementById('detail-view');
+                const selectedId = detailView.dataset.selectedId;
+                
+                if (records.length > 0 && selectedId === 'undefined') {
+                    // Automatically select the first record if nothing is selected
+                    displayAlbumDetails(records[0].id);
+                } else if (selectedId !== 'undefined') {
+                    // Re-display the selected record if it still exists
+                    const selectedRecord = records.find(r => r.id === selectedId);
+                    if (selectedRecord) {
+                        displayAlbumDetails(selectedRecord.id);
+                    } else {
+                        // If the previously selected record was deleted, clear the detail view
+                         detailView.dataset.selectedId = 'undefined';
+                         detailView.innerHTML = `
+                            <div class="text-center p-12">
+                                <svg class="w-16 h-16 mx-auto mb-4 text-accent-color" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v14m-6 3h6a2 2 0 002-2V5a2 2 0 00-2-2H9a2 2 0 00-2 2v14a2 2 0 002 2zm1-9h-2m-1 0h2v4h-2V10z"></path>
+                                </svg>
+                                <h2 class="text-2xl font-semibold mb-2">Select an Album</h2>
+                                <p class="text-gray-400">The previously selected record was removed.</p>
+                            </div>
+                         `;
+                    }
+                }
+            }, (error) => {
+                console.error("Error fetching documents: ", error);
+                document.getElementById('album-list').innerHTML = `<div class="p-4 text-red-400">Error loading data: ${error.message}</div>`;
+            });
+        }
+
+        // --- 3. RENDERING FUNCTIONS ---
+
+        function createAlbumCard(record) {
+            // Ensure condition displays correctly
+            const conditionText = record.condition || 'N/A';
+            let conditionClass = 'bg-gray-500'; // Default gray
+            if (conditionText.includes('Mint')) conditionClass = 'bg-green-600';
+            else if (conditionText.includes('Excellent')) conditionClass = 'bg-blue-600';
+            else if (conditionText.includes('Good') || conditionText.includes('Very Good')) conditionClass = 'bg-yellow-600';
+            else if (conditionText.includes('Fair')) conditionClass = 'bg-red-600';
+            
+            const cardHtml = `
+                <div id="record-${record.id}" 
+                     class="album-card p-4 rounded-lg card cursor-pointer flex items-center space-x-4 hover:bg-gray-700 active:ring-2 active:ring-accent-color transition duration-150"
+                     onclick="window.displayAlbumDetails('${record.id}')">
+                    <img src="${record.image || 'https://placehold.co/64x64/1a1a1a/e5e5e5?text=LP'}" 
+                         onerror="this.onerror=null; this.src='https://placehold.co/64x64/1a1a1a/e5e5e5?text=NO+IMG';" 
+                         alt="${record.title} cover" class="w-16 h-16 object-cover rounded-md shadow-lg">
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-semibold truncate text-white">${record.title}</p>
+                        <p class="text-xs text-gray-400 truncate">${record.artist} (${record.year || 'N/A'})</p>
+                    </div>
+                    <div class="text-xs font-medium text-white p-1 rounded-md ${conditionClass}">${conditionText}</div>
+                </div>
+            `;
+            return cardHtml;
+        }
+        
+        window.renderAlbumList = function(data) {
+            const albumListContainer = document.getElementById('album-list');
+            albumListContainer.innerHTML = ''; // Clear existing list
+
+            if (data.length === 0) {
+                albumListContainer.innerHTML = `<div class="text-center p-8 text-gray-500">No records found matching your search.</div>`;
+                return;
+            }
+
+            let htmlContent = '';
+            data.forEach(record => {
+                htmlContent += createAlbumCard(record);
+            });
+            albumListContainer.innerHTML = htmlContent;
+            
+            // Highlight the currently selected card
+            const selectedId = document.getElementById('detail-view').dataset.selectedId;
+            if (selectedId && selectedId !== 'undefined') {
+                const selectedCard = document.getElementById(`record-${selectedId}`);
+                if (selectedCard) {
+                    selectedCard.classList.add('bg-gray-700', 'ring-2', 'ring-accent-color');
+                }
             }
         }
 
-        // Initialize everything
-        window.onload = () => {
-            lucide.createIcons();
-            initFirebase();
-        };
+        window.displayAlbumDetails = function(recordId) {
+            const record = records.find(r => r.id === recordId);
+            const detailView = document.getElementById('detail-view');
+            
+            // Remove selection styling from all cards
+            document.querySelectorAll('.album-card').forEach(card => {
+                card.classList.remove('bg-gray-700', 'ring-2', 'ring-accent-color');
+            });
+
+            if (!record) {
+                detailView.innerHTML = `<div class="p-4 text-red-400">Record not found.</div>`;
+                detailView.dataset.selectedId = 'undefined';
+                return;
+            }
+
+            // Highlight the selected card
+            const selectedCard = document.getElementById(`record-${record.id}`);
+            if (selectedCard) {
+                selectedCard.classList.add('bg-gray-700', 'ring-2', 'ring-accent-color');
+                selectedCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+            
+            detailView.dataset.selectedId = record.id; // Store selected ID
+            
+            // Determine condition class
+            const conditionText = record.condition || 'N/A';
+            let conditionClass = 'bg-gray-500'; 
+            if (conditionText.includes('Mint')) conditionClass = 'bg-green-600';
+            else if (conditionText.includes('Excellent')) conditionClass = 'bg-blue-600';
+            else if (conditionText.includes('Good') || conditionText.includes('Very Good')) conditionClass = 'bg-yellow-600';
+            else if (conditionText.includes('Fair')) conditionClass = 'bg-red-600';
+
+            // Format the Track List
+            const tracksHtml = (record.tracks && Array.isArray(record.tracks) && record.tracks.length > 0) ? record.tracks.map((track, index) => 
+                `<li class="flex items-center space-x-2 text-gray-300">
+                    <span class="font-mono text-accent-color">${index + 1}.</span>
+                    <span class="flex-1">${track}</span>
+                </li>`
+            ).join('') : '<li class="text-gray-500">Track listing unavailable.</li>';
+            
+            // Construct the detail HTML
+            detailView.innerHTML = `
+                <div class="flex flex-col md:flex-row gap-6 w-full">
+                    <!-- Cover Image & Primary Info -->
+                    <div class="md:w-1/3 flex-shrink-0 text-center">
+                        <img src="${record.image || 'https://placehold.co/300x300/1a1a1a/e5e5e5?text=NO+IMAGE'}" 
+                             onerror="this.onerror=null; this.src='https://placehold.co/300x300/1a1a1a/e5e5e5?text=NO+IMAGE';" 
+                             alt="${record.title} cover" class="w-full h-auto object-cover rounded-xl shadow-2xl mx-auto mb-4 border-4 border-accent-color/50">
+                        
+                        <div class="text-left mt-4 p-4 bg-gray-700 rounded-lg shadow-inner">
+                            <h3 class="text-xl font-bold text-white mb-2">${record.title}</h3>
+                            <p class="text-gray-400 mb-4">${record.artist} (${record.year})</p>
+                            
+                            <div class="text-sm space-y-1">
+                                <p><span class="font-semibold text-accent-color">Genre:</span> ${record.genre || 'N/A'}</p>
+                                <p><span class="font-semibold text-accent-color">Condition:</span> 
+                                    <span class="font-bold p-1 rounded-md ${conditionClass} text-white text-xs">
+                                        ${conditionText}
+                                    </span>
+                                </p>
+                                <p><span class="font-semibold text-accent-color">Catalog ID:</span> ${record.id}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Track Listing & Notes -->
+                    <div class="md:w-2/3">
+                        <h3 class="text-3xl font-bold text-white mb-4 border-b pb-2 border-accent-color">Track Listing</h3>
+                        <ul class="space-y-2 max-h-96 overflow-y-auto pr-4">
+                            ${tracksHtml}
+                        </ul>
+                        
+                        <h3 class="text-2xl font-bold text-white mt-8 mb-3 border-b pb-1 border-accent-color/70">Archival Notes</h3>
+                        <p class="text-gray-400 italic">
+                            ${record.notes || 'No specific archival notes have been recorded for this item.'}
+                        </p>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // --- 4. SEARCH FUNCTIONALITY ---
+
+        window.handleSearch = function() {
+            const searchTerm = document.getElementById('search-input').value.toLowerCase();
+            
+            const filteredRecords = records.filter(record => {
+                const artistMatch = record.artist && record.artist.toLowerCase().includes(searchTerm);
+                const titleMatch = record.title && record.title.toLowerCase().includes(searchTerm);
+                const genreMatch = record.genre && record.genre.toLowerCase().includes(searchTerm);
+                return artistMatch || titleMatch || genreMatch;
+            });
+
+            renderAlbumList(filteredRecords);
+        }
+
+        // --- 5. INITIALIZATION ---
+        window.addEventListener('load', initializeFirebase);
 
     </script>
 </body>
