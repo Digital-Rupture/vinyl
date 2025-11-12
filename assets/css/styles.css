@@ -87,3 +87,50 @@ img {
     transform: translateY(-5px);
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.6);
 }
+/* --- HEADER AND CONTROLS --- */
+
+header {
+    padding: 1rem 0;
+    border-bottom: 1px solid var(--color-surface); /* Subtle separator */
+}
+
+#controls {
+    display: flex;
+    gap: 15px;
+    margin-top: 1.5rem;
+}
+
+#search-input, #filter-btn {
+    padding: 10px 15px;
+    border: 1px solid var(--color-text-secondary);
+    border-radius: 4px;
+    font-size: var(--font-size-base);
+    transition: all 0.2s ease;
+}
+
+#search-input {
+    flex-grow: 1; /* Allows the search bar to take up most of the space */
+    background-color: var(--color-surface);
+    color: var(--color-text-primary);
+}
+
+#search-input::placeholder {
+    color: var(--color-text-secondary);
+}
+
+#search-input:focus {
+    outline: none;
+    border-color: var(--color-accent-teal); /* Highlight on focus */
+}
+
+#filter-btn {
+    background-color: var(--color-accent-copper);
+    color: var(--color-background); /* Dark text on copper background */
+    cursor: pointer;
+    font-weight: bold;
+    border: none;
+}
+
+#filter-btn:hover {
+    background-color: var(--color-accent-teal); /* Interactive hover */
+}
