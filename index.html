@@ -4,21 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Vinyl Collection Archiver | Modern Turntable Theme</title>
-    <!-- Load Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        /* Embedding all styles here for better portability. */
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
-        body { font-family: 'Inter', sans-serif; }
-    </style>
+    <!-- Load Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script> 
     
-    <!-- The previous link to 'assets/css/styles.css' has been removed to avoid dependency issues. -->
+    <!-- LOAD CUSTOM STYLES from the external file, now correctly linked -->
+    <link rel="stylesheet" href="assets/css/styles.css">
 </head>
 <body class="bg-gray-100 min-h-screen">
 
     <div id="message-box" class="message-box fixed top-4 right-4 z-50 p-3 rounded-lg shadow-xl hidden"></div>
 
     <!-- Header / Navbar -->
+    <!-- These classes are Tailwind utilities and belong here for clean code -->
     <header class="bg-gray-900 text-white shadow-lg sticky top-0 z-10">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col md:flex-row justify-between items-center">
             <h1 class="text-3xl font-extrabold tracking-tight mb-2 md:mb-0">
@@ -54,7 +51,63 @@
         </div>
     </main>
 
+    <!-- Filter Modal (Hidden by Default) -->
+    <div id="filter-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 transform transition duration-300 scale-100">
+            <div class="flex justify-between items-center border-b pb-3 mb-4">
+                <h2 class="text-2xl font-bold text-gray-900">Filter Collection</h2>
+                <button id="close-modal-button" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            
+            <div class="space-y-4">
+                <!-- Filter by Format -->
+                <div>
+                    <label for="filter-format" class="block text-sm font-medium text-gray-700 mb-2">Format</label>
+                    <select id="filter-format" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-yellow-500 focus:border-yellow-500">
+                        <option value="">All Formats</option>
+                        <option value="LP">LP (12")</option>
+                        <option value="7">7" Single</option>
+                        <option value="10">10"</option>
+                        <option value="Cassette">Cassette</option>
+                        <option value="CD">CD</option>
+                    </select>
+                </div>
+
+                <!-- Filter by Release Year Range -->
+                <div class="flex space-x-4">
+                    <div class="flex-1">
+                        <label for="filter-year-from" class="block text-sm font-medium text-gray-700 mb-2">Year From</label>
+                        <input type="number" id="filter-year-from" placeholder="e.g., 1970" 
+                               class="w-full p-2 border border-gray-300 rounded-lg focus:ring-yellow-500 focus:border-yellow-500">
+                    </div>
+                    <div class="flex-1">
+                        <label for="filter-year-to" class="block text-sm font-medium text-gray-700 mb-2">Year To</label>
+                        <input type="number" id="filter-year-to" placeholder="e.g., 1985" 
+                               class="w-full p-2 border border-gray-300 rounded-lg focus:ring-yellow-500 focus:border-yellow-500">
+                    </div>
+                </div>
+
+                <!-- Reset Button -->
+                <div>
+                    <button id="reset-filter-button" class="w-full bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg shadow-md transition duration-150 transform hover:scale-[1.01]">
+                        Reset Filters
+                    </button>
+                </div>
+            </div>
+
+            <!-- Apply Button -->
+            <div class="mt-6">
+                <button id="apply-filter-button" class="w-full bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-bold py-3 px-4 rounded-lg shadow-md transition duration-150 transform hover:scale-105">
+                    Apply Filters
+                </button>
+            </div>
+        </div>
+    </div>
+
+
     <!-- FIX: Updated path to reflect the new location of app.js -->
-    <script type="module" src="/assets/js/app.js"></script>
+    <script type="module" src="assets/js/app.js"></script>
 </body>
 </html>
