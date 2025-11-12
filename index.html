@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vinyl Collection Archiver | Modern Turntable Theme</title>
+    <link rel="stylesheet" href="styles.css"> 
+</head>
+<body>
+    <div id="app-container">
+        
+        <header>
+            <h1>The Vinyl Collection Archiver</h1>
+            <h2>56 Records Cataloged for Web App Project</h2>
+            <div id="controls">
+                <input type="text" id="search-input" placeholder="Search by Artist or Title...">
+                <button id="filter-btn">Filter</button>
+            </div>
+        </header>
+
+        <hr>
+
+        <main class="album-grid" id="collection-grid">
+
+            <div class="album-card" data-id="0">
+                <img src="/vynil/assets/images/placeholder.jpg" alt="" class="album-cover">
+                <div class="card-details">
+                    <p class="card-artist">Artist Name</p>
+                    <p class="card-title">Album Title</p>
+                    <div class="value-indicator" style="background-color: var(--color-value-high);"></div>
+                </div>
+            </div>
+
+        </main>
+        
+    </div>
+
+    <script src="app.js"></script> 
+</body>
+</html>
