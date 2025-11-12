@@ -3,355 +3,460 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vinyl Archive</title>
-    <!-- Load Tailwind CSS -->
+    <title>Vinyl Record Scanner</title>
+    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Inter Font -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            background-color: #f8f8f8;
+        body { font-family: 'Inter', sans-serif; }
+        /* Style for the video feed and scan area */
+        #video-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            aspect-ratio: 1 / 1; /* Keep a square aspect ratio for typical record covers */
+            margin: 0 auto;
+            border: 4px solid #10b981; /* Emerald border */
+            border-radius: 1rem;
+            overflow: hidden;
+            background-color: #1f2937; /* Dark background */
         }
-        .container {
-            max-width: 900px;
+        #video-feed {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1); /* Often needed to mirror front-facing camera, adjust if using 'environment' */
         }
-        .record-card {
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-        }
-        .record-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
-        }
-        .icon-google {
-            /* Inline SVG for Google Icon */
-            width: 20px;
-            height: 20px;
-            margin-right: 8px;
-            fill: currentColor;
+        /* Custom message box style */
+        .message-box {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            z-index: 100;
+            transition: opacity 0.3s ease-in-out;
         }
     </style>
 </head>
-<body class="bg-gray-50 p-4 sm:p-8">
+<body class="bg-gray-900 text-white min-h-screen p-4 sm:p-8">
 
-    <!-- Header and Auth Status -->
-    <header class="w-full bg-white shadow-lg rounded-xl p-4 mb-8 sticky top-0 z-10">
-        <div class="container mx-auto flex justify-between items-center">
-            <h1 class="text-3xl font-bold text-gray-800 tracking-tight flex items-center">
-                <svg class="w-8 h-8 mr-2 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19H5a2 2 0 00-2 2v1a2 2 0 002 2h4a2 2 0 002-2v-1a2 2 0 00-2-2zm0 0a2 2 0 00-2 2v1m-2-3a2 2 0 00-2-2v1m-4-3a2 2 0 002 2v1"></path></svg>
-                Vinyl Archive
-            </h1>
-            
-            <div id="auth-ui" class="flex items-center space-x-3">
-                <!-- User Profile/Sign Out will appear here -->
-                <button id="sign-in-button" class="flex items-center bg-indigo-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-indigo-700 transition duration-150 shadow-md">
-                    <svg class="icon-google" viewBox="0 0 533.5 544.3" xmlns="http://www.w3.org/2000/svg"><path d="M533.5 244.3C533.5 228.4 532 212 529.3 196.2H272.1V291H415.7C410.6 323.7 392.6 353 366.1 372.9L365.7 373.2L446.7 435.6L447.1 435.9C497.1 390.9 533.5 321.4 533.5 244.3Z" fill="#4285f4"/><path d="M272.1 544.3C340.8 544.3 399 521.8 447.1 435.9L366.1 372.9C344.2 387.6 311 396.6 272.1 396.6C208.5 396.6 153.2 353.6 133.4 291H51.4L50.2 291.8C10.7 370 78.8 456.9 167.3 506.7C184.2 516.3 227.1 528.2 272.1 544.3Z" fill="#34a853"/><path d="M133.4 291C128.6 276.4 125.7 261 125.7 244.3C125.7 227.6 128.6 212.2 133.4 197.6L50.2 135.2L49.4 135.9C5.3 194.5 1 234.9 1 244.3C1 253.7 5.3 294.1 49.4 352.7L133.4 291Z" fill="#fbbc05"/><path d="M272.1 92.9C314.1 92.9 347 106.8 368.1 127.8L448.2 47.7C399 7.9 340.8 0 272.1 0C167.3 0 10.7 87.4 50.2 135.9L133.4 197.6C153.2 135 208.5 92.9 272.1 92.9Z" fill="#ea4335"/></svg>
-                    Sign in with Google
+    <div class="max-w-4xl mx-auto">
+        <header class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-emerald-400">VinylScan</h1>
+            <p class="text-gray-400">Scan your records with AI to quickly add them to your collection.</p>
+        </header>
+
+        <!-- Main Content Area -->
+        <div class="bg-gray-800 p-6 rounded-xl shadow-2xl">
+            <h2 class="text-2xl font-semibold mb-4 flex items-center text-gray-200">
+                <i data-lucide="scan-line" class="w-6 h-6 mr-2 text-emerald-400"></i>
+                Camera Scanner
+            </h2>
+
+            <!-- Video Feed / Scan Area -->
+            <div id="video-container" class="mb-6">
+                <video id="video-feed" autoplay playsinline></video>
+                <div id="loading-overlay" class="absolute inset-0 bg-gray-900/80 flex flex-col items-center justify-center hidden">
+                    <div class="animate-spin rounded-full h-12 w-12 border-b-4 border-emerald-500"></div>
+                    <p class="mt-4 text-emerald-300 font-semibold" id="loading-text">Starting camera...</p>
+                </div>
+            </div>
+
+            <!-- Controls and Status -->
+            <div class="flex flex-col sm:flex-row gap-4 mb-6">
+                <button id="scan-button" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-6 rounded-lg transition duration-200 shadow-md shadow-emerald-900 disabled:opacity-50" disabled>
+                    <span class="flex items-center justify-center">
+                        <i data-lucide="camera" class="w-5 h-5 mr-2"></i>
+                        Scan Record
+                    </span>
+                </button>
+                <button id="camera-toggle" class="sm:w-auto bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-6 rounded-lg transition duration-200 disabled:opacity-50">
+                    <span class="flex items-center justify-center">
+                        <i data-lucide="rotate-ccw" class="w-5 h-5 mr-2"></i>
+                        Toggle Camera
+                    </span>
                 </button>
             </div>
-        </div>
-    </header>
 
-    <!-- Main Content Area (Hidden until sign-in) -->
-    <main id="app-content" class="container mx-auto flex-grow hidden">
-        <div class="p-6 bg-white rounded-xl shadow-lg">
-            <h2 class="text-2xl font-bold mb-4 text-gray-700">Your Records</h2>
-            <div id="records-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <!-- Records will be displayed here -->
+            <!-- AI Result Display -->
+            <div id="result-display" class="bg-gray-700 p-4 rounded-lg hidden">
+                <h3 class="text-xl font-semibold mb-2 text-gray-100">AI Scan Result:</h3>
+                <div id="result-content">
+                    <p class="text-gray-300">Artist: <span id="artist-output" class="font-medium text-emerald-300"></span></p>
+                    <p class="text-gray-300">Album: <span id="album-output" class="font-medium text-emerald-300"></span></p>
+                    <p class="text-gray-300">Year: <span id="year-output" class="font-medium text-emerald-300"></span></p>
+                </div>
+                <button id="save-button" class="mt-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition duration-200 shadow-md disabled:opacity-50">
+                    <span class="flex items-center justify-center">
+                        <i data-lucide="save" class="w-4 h-4 mr-2"></i>
+                        Save to Collection
+                    </span>
+                </button>
             </div>
             
-            <button id="add-record-button" class="mt-8 w-full bg-teal-500 text-white px-6 py-3 rounded-lg font-bold text-lg hover:bg-teal-600 transition duration-150 shadow-lg">
-                + Add New Record
-            </button>
+            <p id="user-info" class="text-sm text-gray-500 mt-4">Auth Status: Connecting...</p>
         </div>
-    </main>
 
-    <!-- Loading/Error Indicator -->
-    <div id="status-message" class="text-center p-6 text-gray-500 hidden">
-        Loading...
+        <!-- Hidden Elements -->
+        <canvas id="canvas-capture" class="hidden"></canvas>
     </div>
 
-    <!-- Firebase Configuration and Logic -->
-    <script type="module">
-        // 1. Firebase Configuration (Your public, client-side config)
-        // NOTE: In a real Cloudflare deployment, you would typically use environment variables
-        // to pass this config, but for this single-file immersive, we use the raw object.
-        const firebaseConfig = {
-            apiKey: "AIzaSyA2JDWhhjW5ZRz7BRfG1eNUOOcNXPbRK5g",
-            authDomain: "vinyl-digitalrupture.firebaseapp.com",
-            projectId: "vinyl-digitalrupture",
-            storageBucket: "vinyl-digitalrupture.firebasestorage.app",
-            messagingSenderId: "991728224627",
-            appId: "1:991728224627:web:7143682c8696ae704f9d06",
-            measurementId: "G-N0WST0EWMN"
-        };
-        
-        // Canvas Global Variables (USED FOR INITIALIZING AUTH IN THE CANVAS ONLY)
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfigRaw = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : firebaseConfig;
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-        
-        // 2. Firebase SDK Imports
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { 
-            getAuth, 
-            GoogleAuthProvider, 
-            signInWithPopup, 
-            signOut, 
-            onAuthStateChanged,
-            signInWithCustomToken,
-            signInAnonymously
-        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { 
-            getFirestore, 
-            collection, 
-            query, 
-            onSnapshot, 
-            doc, 
-            setDoc,
-            serverTimestamp,
-            getDocs,
-            deleteDoc,
-            where,
-            orderBy
-        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    <!-- Message Box for Alerts -->
+    <div id="message-box" class="message-box bg-red-600 text-white p-3 rounded-lg shadow-xl hidden opacity-0"></div>
 
-        // 3. Global Firebase Instances
-        const app = initializeApp(firebaseConfigRaw);
-        const db = getFirestore(app);
-        const auth = getAuth(app);
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, collection, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Set Firebase logging level for debugging
+        setLogLevel('debug');
+
+        // Global Firebase variables
+        let app, auth, db;
+        let userId = 'unknown';
+
+        // LLM Configuration
+        const MODEL_NAME = "gemini-2.5-flash-preview-09-2025";
+        const API_KEY = ""; // Canvas provides this dynamically
+
+        // UI Elements
+        const videoFeed = document.getElementById('video-feed');
+        const canvasCapture = document.getElementById('canvas-capture');
+        const scanButton = document.getElementById('scan-button');
+        const saveButton = document.getElementById('save-button');
+        const cameraToggle = document.getElementById('camera-toggle');
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const loadingText = document.getElementById('loading-text');
+        const resultDisplay = document.getElementById('result-display');
+        const artistOutput = document.getElementById('artist-output');
+        const albumOutput = document.getElementById('album-output');
+        const yearOutput = document.getElementById('year-output');
+        const userInfo = document.getElementById('user-info');
+        const videoContainer = document.getElementById('video-container');
         
-        let currentUserId = null;
-        let authReady = false;
+        let cameraStream = null;
+        let isFrontCamera = false;
+        let currentRecordData = null; // Store the data received from Gemini
 
         // --- Utility Functions ---
 
-        // Function to create the firestore path for a user's private data
-        const getUserCollectionRef = (userId) => {
-            // Path: /artifacts/{appId}/users/{userId}/records
-            const path = `artifacts/${appId}/users/${userId}/records`;
-            return collection(db, path);
-        };
-
-        // --- UI Update Functions ---
-
-        const updateAuthUI = (user) => {
-            const authUi = document.getElementById('auth-ui');
-            const signInButton = document.getElementById('sign-in-button');
-            const appContent = document.getElementById('app-content');
+        /** Displays a temporary message box instead of using alert() */
+        function showMessage(message, isError = false) {
+            const box = document.getElementById('message-box');
+            box.textContent = message;
+            box.classList.remove('hidden', 'bg-red-600', 'bg-green-600');
+            box.classList.add(isError ? 'bg-red-600' : 'bg-green-600', 'opacity-100');
             
-            // Clear current UI
-            authUi.innerHTML = '';
+            setTimeout(() => {
+                box.classList.add('opacity-0');
+                setTimeout(() => box.classList.add('hidden'), 300);
+            }, 5000);
+        }
 
-            if (user) {
-                // User is signed in
-                currentUserId = user.uid;
-                appContent.classList.remove('hidden');
-
-                const userEmail = user.email || 'Anonymous User';
-
-                authUi.innerHTML = `
-                    <div class="text-sm text-gray-600 truncate max-w-[150px] hidden sm:block">${userEmail}</div>
-                    <button id="sign-out-button" class="bg-red-500 text-white px-3 py-2 rounded-lg font-semibold hover:bg-red-600 transition duration-150 shadow-md">
-                        Sign Out
-                    </button>
-                `;
-
-                // Set up sign-out listener
-                document.getElementById('sign-out-button').addEventListener('click', handleSignOut);
-                
-                // Once signed in, start listening to the database
-                listenToRecords(user.uid);
-
-            } else {
-                // User is signed out
-                currentUserId = null;
-                appContent.classList.add('hidden');
-                
-                // Re-add the sign-in button HTML
-                authUi.innerHTML = `
-                    <button id="sign-in-button" class="flex items-center bg-indigo-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-indigo-700 transition duration-150 shadow-md">
-                        <svg class="icon-google" viewBox="0 0 533.5 544.3" xmlns="http://www.w3.org/2000/svg"><path d="M533.5 244.3C533.5 228.4 532 212 529.3 196.2H272.1V291H415.7C410.6 323.7 392.6 353 366.1 372.9L365.7 373.2L446.7 435.6L447.1 435.9C497.1 390.9 533.5 321.4 533.5 244.3Z" fill="#4285f4"/><path d="M272.1 544.3C340.8 544.3 399 521.8 447.1 435.9L366.1 372.9C344.2 387.6 311 396.6 272.1 396.6C208.5 396.6 153.2 353.6 133.4 291H51.4L50.2 291.8C10.7 370 78.8 456.9 167.3 506.7C184.2 516.3 227.1 528.2 272.1 544.3Z" fill="#34a853"/><path d="M133.4 291C128.6 276.4 125.7 261 125.7 244.3C125.7 227.6 128.6 212.2 133.4 197.6L50.2 135.2L49.4 135.9C5.3 194.5 1 234.9 1 244.3C1 253.7 5.3 294.1 49.4 352.7L133.4 291Z" fill="#fbbc05"/><path d="M272.1 92.9C314.1 92.9 347 106.8 368.1 127.8L448.2 47.7C399 7.9 340.8 0 272.1 0C167.3 0 10.7 87.4 50.2 135.9L133.4 197.6C153.2 135 208.5 92.9 272.1 92.9Z" fill="#ea4335"/></svg>
-                        Sign in with Google
-                    </button>
-                `;
-                // Set up sign-in listener
-                document.getElementById('sign-in-button').addEventListener('click', handleSignInGoogle);
-            }
-        };
-        
-        const renderRecords = (records) => {
-            const list = document.getElementById('records-list');
-            list.innerHTML = ''; // Clear existing records
-
-            if (records.length === 0) {
-                list.innerHTML = '<p class="text-center text-gray-500 col-span-full">No records found. Click "Add New Record" to start your collection!</p>';
-                return;
-            }
-
-            records.forEach(record => {
-                const card = document.createElement('div');
-                card.className = 'record-card bg-gray-100 p-4 rounded-lg shadow-md border border-gray-200';
-                card.innerHTML = `
-                    <h3 class="text-xl font-bold text-gray-800">${record.artist} - ${record.album}</h3>
-                    <p class="text-sm text-gray-600 mb-2">${record.year} | ${record.format || 'LP'}</p>
-                    <p class="text-sm italic text-gray-500">${record.notes || 'No notes available.'}</p>
-                    <div class="flex justify-end space-x-2 mt-3">
-                        <button data-id="${record.id}" class="edit-btn text-sm text-indigo-600 hover:text-indigo-800 font-medium">Edit</button>
-                        <button data-id="${record.id}" class="delete-btn text-sm text-red-500 hover:text-red-700 font-medium">Delete</button>
-                    </div>
-                `;
-                list.appendChild(card);
-            });
+        /** Converts an image URL to a Base64 string for the API */
+        function getBase64Image(canvas) {
+            // Resize the canvas to a reasonable size (e.g., 600x600) for efficiency and speed
+            const MAX_SIZE = 600;
+            const ctx = canvas.getContext('2d');
             
-            // Re-attach listeners for delete buttons
-            document.querySelectorAll('.delete-btn').forEach(button => {
-                button.addEventListener('click', (e) => handleDeleteRecord(e.target.dataset.id));
-            });
-            // (Note: Edit functionality is not yet implemented)
-        };
+            const ratio = Math.min(MAX_SIZE / canvas.width, MAX_SIZE / canvas.height);
+            const newWidth = canvas.width * ratio;
+            const newHeight = canvas.height * ratio;
 
-        // --- Authentication Handlers ---
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = newWidth;
+            tempCanvas.height = newHeight;
+            const tempCtx = tempCanvas.getContext('2d');
+            
+            // Draw the original image to the new, smaller canvas
+            tempCtx.drawImage(canvas, 0, 0, canvas.width, canvas.height, 0, 0, newWidth, newHeight);
 
-        const handleSignInGoogle = async () => {
-            document.getElementById('status-message').textContent = 'Signing in...';
-            document.getElementById('status-message').classList.remove('hidden');
+            // Return the base64 data URL
+            return tempCanvas.toDataURL('image/jpeg', 0.8).split(',')[1];
+        }
 
-            const provider = new GoogleAuthProvider();
-            try {
-                // Sign in with Google Popup
-                await signInWithPopup(auth, provider);
-                // onAuthStateChanged will handle the rest
-            } catch (error) {
-                console.error("Google Sign-In Error:", error);
-                document.getElementById('status-message').textContent = `Sign-in failed: ${error.message}`;
-            } finally {
-                // Wait for onAuthStateChanged to settle
-                document.getElementById('status-message').classList.add('hidden');
-            }
-        };
-
-        const handleSignOut = async () => {
-            try {
-                await signOut(auth);
-                document.getElementById('records-list').innerHTML = ''; // Clear records on sign out
-            } catch (error) {
-                console.error("Sign-Out Error:", error);
-                document.getElementById('status-message').textContent = 'Sign-out failed.';
-                document.getElementById('status-message').classList.remove('hidden');
-            }
-        };
-
-        const canvasInitialAuth = async () => {
-            try {
-                if (initialAuthToken) {
-                    await signInWithCustomToken(auth, initialAuthToken);
-                } else {
-                    await signInAnonymously(auth);
+        /** Retries the fetch operation with exponential backoff */
+        async function fetchWithRetry(url, options, maxRetries = 5) {
+            for (let i = 0; i < maxRetries; i++) {
+                try {
+                    const response = await fetch(url, options);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response;
+                } catch (error) {
+                    if (i === maxRetries - 1) throw error;
+                    const delay = Math.pow(2, i) * 1000 + Math.random() * 1000;
+                    // console.debug(`Fetch failed, retrying in ${delay / 1000}s...`, error.message);
+                    await new Promise(resolve => setTimeout(resolve, delay));
                 }
-            } catch (error) {
-                console.error("Canvas initial authentication failed:", error);
-                // Fallback: the onAuthStateChanged listener will handle the case where sign-in fails or no user is present
             }
-        };
+        }
+        
+        // --- Camera Functions ---
 
-
-        // --- Firestore Handlers ---
-
-        const listenToRecords = (userId) => {
-            if (!userId) return;
-
-            const q = query(getUserCollectionRef(userId));
-
-            // Set up real-time listener
-            onSnapshot(q, (snapshot) => {
-                const records = [];
-                snapshot.forEach(doc => {
-                    records.push({ id: doc.id, ...doc.data() });
-                });
-                console.log(`Received ${records.length} records for user: ${userId}`);
-
-                // Sort the records by album name (client-side sort to avoid index requirements)
-                records.sort((a, b) => a.album.localeCompare(b.album));
-
-                renderRecords(records);
-            }, (error) => {
-                console.error("Firestore Snapshot Error:", error);
-                document.getElementById('status-message').textContent = 'Error loading records.';
-                document.getElementById('status-message').classList.remove('hidden');
-            });
-        };
-
-        const handleAddRecord = async () => {
-             if (!currentUserId) {
-                document.getElementById('status-message').textContent = 'Please sign in to add a record.';
-                document.getElementById('status-message').classList.remove('hidden');
-                setTimeout(() => document.getElementById('status-message').classList.add('hidden'), 3000);
-                return;
+        /** Initializes the camera stream */
+        async function initCamera(isFront) {
+            if (cameraStream) {
+                cameraStream.getTracks().forEach(track => track.stop());
             }
 
-            // Simple hard-coded example record for testing
-            const newRecord = {
-                artist: 'Led Zeppelin',
-                album: 'IV',
-                year: 1971,
-                format: 'LP',
-                notes: 'Contains Stairway to Heaven. Essential classic rock!',
-                timestamp: serverTimestamp()
-            };
-
-            document.getElementById('status-message').textContent = 'Adding record...';
-            document.getElementById('status-message').classList.remove('hidden');
+            // Show loading
+            loadingOverlay.classList.remove('hidden');
+            loadingText.textContent = "Requesting camera access...";
+            scanButton.disabled = true;
 
             try {
-                const userRecordsCollection = getUserCollectionRef(currentUserId);
-                // Using setDoc with a generated ID from the collection ref
-                await setDoc(doc(userRecordsCollection), newRecord); 
-                document.getElementById('status-message').textContent = 'Record added successfully!';
-            } catch (e) {
-                console.error("Error adding document: ", e);
-                document.getElementById('status-message').textContent = 'Error adding record. Check console.';
-            } finally {
-                setTimeout(() => document.getElementById('status-message').classList.add('hidden'), 3000);
+                // Determine which camera to request
+                const videoConstraints = {
+                    facingMode: isFront ? "user" : "environment"
+                };
+
+                cameraStream = await navigator.mediaDevices.getUserMedia({ video: videoConstraints });
+                videoFeed.srcObject = cameraStream;
+                videoFeed.onloadedmetadata = () => {
+                    videoFeed.play();
+                    loadingOverlay.classList.add('hidden');
+                    scanButton.disabled = false;
+                    
+                    // Adjust mirroring based on camera
+                    videoFeed.style.transform = isFront ? 'scaleX(-1)' : 'scaleX(1)';
+                    showMessage("Camera feed ready! Hold a record cover in view.");
+                };
+            } catch (err) {
+                loadingOverlay.classList.add('hidden');
+                console.error("Error accessing camera:", err);
+                showMessage("Could not access camera. Please check permissions.", true);
             }
-        };
+        }
         
-        const handleDeleteRecord = async (recordId) => {
-            if (!currentUserId || !recordId) return;
-
-            // In a real app, you'd use a custom modal here, but for this demo, we'll use a local message.
-            document.getElementById('status-message').textContent = 'Deleting record...';
-            document.getElementById('status-message').classList.remove('hidden');
-
-            try {
-                const docPath = `artifacts/${appId}/users/${currentUserId}/records/${recordId}`;
-                await deleteDoc(doc(db, docPath));
-                document.getElementById('status-message').textContent = 'Record deleted.';
-            } catch (e) {
-                console.error("Error deleting document: ", e);
-                document.getElementById('status-message').textContent = 'Error deleting record.';
-            } finally {
-                 setTimeout(() => document.getElementById('status-message').classList.add('hidden'), 3000);
-            }
-        };
-
-
-        // --- Initialization and Event Listeners ---
-        
-        // This MUST be called first to handle the Canvas's custom auth token
-        canvasInitialAuth();
-
-        // 4. Main Auth State Listener
-        // This listener fires whenever a user signs in or out, including after the initial Canvas sign-in.
-        onAuthStateChanged(auth, (user) => {
-            // This is the primary function controlling what the user sees
-            updateAuthUI(user);
+        cameraToggle.addEventListener('click', () => {
+            isFrontCamera = !isFrontCamera;
+            initCamera(isFrontCamera);
         });
 
-        // Event listener for the sample Add Record button
-        document.getElementById('add-record-button').addEventListener('click', handleAddRecord);
+        // --- Core Scanning Logic ---
+
+        /** Executes the full scan sequence: Capture -> API Call -> Display */
+        async function scanRecord() {
+            // 1. Capture Image
+            const videoRatio = videoFeed.videoWidth / videoFeed.videoHeight;
+            const containerWidth = videoContainer.clientWidth;
+            
+            // Set canvas size to match the container width/height
+            canvasCapture.width = containerWidth;
+            canvasCapture.height = containerWidth; 
+
+            // Calculate draw parameters to crop/fit the video feed into the square canvas
+            const ctx = canvasCapture.getContext('2d');
+            let sx, sy, sWidth, sHeight;
+            
+            if (videoRatio > 1) { // Landscape video
+                sHeight = videoFeed.videoHeight;
+                sWidth = videoFeed.videoHeight;
+                sx = (videoFeed.videoWidth - sWidth) / 2;
+                sy = 0;
+            } else { // Portrait video
+                sWidth = videoFeed.videoWidth;
+                sHeight = videoFeed.videoWidth;
+                sx = 0;
+                sy = (videoFeed.videoHeight - sHeight) / 2;
+            }
+            
+            ctx.drawImage(videoFeed, sx, sy, sWidth, sHeight, 0, 0, containerWidth, containerWidth);
+
+            const base64Image = getBase64Image(canvasCapture);
+            
+            // 2. API Call Setup
+            scanButton.disabled = true;
+            loadingOverlay.classList.remove('hidden');
+            loadingText.textContent = "Analyzing record cover with AI...";
+            resultDisplay.classList.add('hidden');
+
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${API_KEY}`;
+            
+            const userQuery = "Identify the artist, album title, and primary release year from this vinyl record cover image. Return only a JSON object.";
+            const systemPrompt = "You are a specialized music cataloging AI. Analyze the provided image of a record cover and extract the Artist, Album Title, and Release Year. You MUST return the result as a single JSON array containing one object with the keys 'artist', 'album', and 'year'. Ensure the year is a number.";
+
+            const payload = {
+                contents: [
+                    {
+                        role: "user",
+                        parts: [
+                            { text: userQuery },
+                            {
+                                inlineData: {
+                                    mimeType: "image/jpeg",
+                                    data: base64Image
+                                }
+                            }
+                        ]
+                    }
+                ],
+                // Use search grounding to ensure accuracy against real-world data
+                tools: [{ "google_search": {} }],
+                systemInstruction: {
+                    parts: [{ text: systemPrompt }]
+                },
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    responseSchema: {
+                        type: "ARRAY",
+                        items: {
+                            type: "OBJECT",
+                            properties: {
+                                "artist": { "type": "STRING", "description": "The main recording artist or band." },
+                                "album": { "type": "STRING", "description": "The album title." },
+                                "year": { "type": "NUMBER", "description": "The primary release year of the album, as an integer." }
+                            },
+                            "propertyOrdering": ["artist", "album", "year"]
+                        }
+                    }
+                }
+            };
+            
+            // 3. Execute API Call
+            try {
+                const response = await fetchWithRetry(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+                
+                // Extract and parse JSON text
+                const jsonText = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (!jsonText) throw new Error("AI failed to return structured data.");
+                
+                const parsedResultArray = JSON.parse(jsonText);
+                const record = parsedResultArray[0];
+
+                if (!record || !record.artist || !record.album) {
+                    throw new Error("AI returned invalid or incomplete data.");
+                }
+
+                currentRecordData = {
+                    artist: record.artist,
+                    album: record.album,
+                    year: record.year || 'Unknown',
+                    scannedAt: new Date().toISOString()
+                };
+                
+                // 4. Display Results
+                artistOutput.textContent = currentRecordData.artist;
+                albumOutput.textContent = currentRecordData.album;
+                yearOutput.textContent = currentRecordData.year;
+                
+                loadingOverlay.classList.add('hidden');
+                resultDisplay.classList.remove('hidden');
+                saveButton.disabled = false;
+                showMessage("Scan successful! Review the details before saving.");
+
+            } catch (error) {
+                console.error("Scan Error:", error);
+                loadingText.textContent = "Scan Failed";
+                showMessage(`Error scanning record: ${error.message}. Please try again.`, true);
+                loadingOverlay.classList.add('hidden');
+                scanButton.disabled = false;
+            } finally {
+                scanButton.disabled = false;
+            }
+        }
+        
+        scanButton.addEventListener('click', scanRecord);
+
+
+        // --- Firestore Functions ---
+
+        /** Saves the identified record to the user's collection in Firestore */
+        async function saveRecord() {
+            if (!currentRecordData || !userId) {
+                showMessage("Cannot save: Authentication or record data missing.", true);
+                return;
+            }
+            
+            saveButton.disabled = true;
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+            
+            // Define the public collection path
+            const recordsCollectionRef = collection(db, `artifacts/${appId}/public/data/records`);
+
+            try {
+                // Add the new document with the scanned data
+                await setDoc(doc(recordsCollectionRef), {
+                    ...currentRecordData,
+                    userId: userId, // Record who scanned it
+                });
+
+                showMessage(`Successfully saved "${currentRecordData.album}" to collection!`);
+                
+                // Clear state
+                currentRecordData = null;
+                resultDisplay.classList.add('hidden');
+            } catch (e) {
+                console.error("Error saving document: ", e);
+                showMessage("Failed to save record to database.", true);
+            } finally {
+                saveButton.disabled = false;
+            }
+        }
+        
+        saveButton.addEventListener('click', saveRecord);
+
+
+        // --- Firebase Initialization ---
+
+        function initFirebase() {
+            try {
+                const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+                app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+                
+                // 1. Listen for Auth State Change
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        userId = user.uid;
+                        userInfo.textContent = `User ID: ${userId} | Status: Ready`;
+                        // Start the camera once authentication is established
+                        initCamera(isFrontCamera);
+                    } else {
+                        // User is signed out, or initial sign-in failed
+                        userInfo.textContent = `User ID: Not Signed In | Status: Waiting...`;
+                    }
+                });
+
+                // 2. Perform Initial Sign-in
+                const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+                if (initialAuthToken) {
+                    signInWithCustomToken(auth, initialAuthToken)
+                        .catch(error => {
+                            console.error("Custom token sign-in failed:", error);
+                            signInAnonymously(auth).catch(e => console.error("Anonymous sign-in failed:", e));
+                        });
+                } else {
+                    signInAnonymously(auth).catch(e => console.error("Anonymous sign-in failed:", e));
+                }
+
+            } catch (error) {
+                console.error("Firebase initialization failed:", error);
+                userInfo.textContent = "Auth Status: Error (Check console)";
+                showMessage("Critical Error: Firebase failed to initialize.", true);
+            }
+        }
+
+        // Initialize everything
+        window.onload = () => {
+            lucide.createIcons();
+            initFirebase();
+        };
 
     </script>
 </body>
