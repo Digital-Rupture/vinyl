@@ -3,111 +3,212 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vinyl Collection Archiver | Modern Turntable Theme</title>
-    <!-- Load Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script> 
-    
-    <!-- LOAD CUSTOM STYLES from the external file, now correctly linked -->
-    <link rel="stylesheet" href="/assets/css/styles.css">
+    <title>Veteran's Vinyl Archiver</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Use Inter font family -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7f7f7;
+            min-height: 100vh;
+        }
+        /* Custom scrollbar for better aesthetics */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #e0e0e0;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #a0a0a0;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #808080;
+        }
+        /* Style for the search input group */
+        .search-group input:focus {
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.5); /* Blue focus ring */
+            border-color: #3b82f6;
+        }
+    </style>
 </head>
-<body class="bg-gray-100 min-h-screen">
+<body class="p-4 md:p-8">
 
-    <div id="message-box" class="message-box fixed top-4 right-4 z-50 p-3 rounded-lg shadow-xl hidden"></div>
+    <!-- Header and Controls -->
+    <header class="mb-8 max-w-6xl mx-auto">
+        <h1 class="text-4xl font-extrabold text-gray-900 mb-2">Vinyl Collection Archive</h1>
+        <p class="text-lg text-gray-600 mb-6">A centralized digital record of your cherished physical collection.</p>
+        
+        <div id="user-display" class="hidden text-xs font-mono bg-gray-100 p-2 rounded-lg mb-4"></div>
 
-    <!-- Header / Navbar -->
-    <!-- These classes are Tailwind utilities and belong here for clean code -->
-    <header class="bg-gray-900 text-white shadow-lg sticky top-0 z-10">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col md:flex-row justify-between items-center">
-            <h1 class="text-3xl font-extrabold tracking-tight mb-2 md:mb-0">
-                <span class="text-yellow-400">Vinyl</span> Archiver
-            </h1>
-            <div class="flex items-center space-x-4 w-full md:w-auto">
-                <input type="text" id="search-input" placeholder="Search by Artist or Title..." 
-                       class="w-full md:w-64 p-2 rounded-lg text-gray-900 border border-gray-300 focus:ring-yellow-500 focus:border-yellow-500 transition duration-150">
-                <button id="filter-button" class="bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-bold py-2 px-4 rounded-lg shadow-md transition duration-150 transform hover:scale-105">
-                    Filter
-                </button>
+        <div class="flex flex-col md:flex-row gap-4 mb-6">
+            <!-- Search Bar -->
+            <div class="search-group relative flex-grow">
+                <input 
+                    type="text" 
+                    id="search-input" 
+                    placeholder="Search by Artist or Album Title..."
+                    class="w-full p-3 pl-10 border border-gray-300 rounded-xl shadow-md transition duration-150 focus:outline-none"
+                />
+                <!-- Search Icon (Lucide-react fallback using inline SVG) -->
+                <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             </div>
-        </div>
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:lg-8 pb-3 text-xs text-gray-400">
-             <div id="user-display" class="hidden"></div>
+
+            <!-- Filter Button -->
+            <button id="filter-button" 
+                class="flex items-center justify-center gap-2 p-3 bg-gray-700 text-white font-semibold rounded-xl shadow-md hover:bg-gray-800 transition duration-150 transform hover:scale-105 active:scale-95"
+            >
+                <!-- Filter Icon -->
+                <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+                Filter
+            </button>
+            
+            <!-- NEW: Add Record Button -->
+            <button id="add-record-button" 
+                class="flex items-center justify-center gap-2 p-3 bg-blue-600 text-white font-semibold rounded-xl shadow-md hover:bg-blue-700 transition duration-150 transform hover:scale-105 active:scale-95"
+            >
+                <!-- Plus Icon -->
+                <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                Add New Record
+            </button>
+
         </div>
     </header>
 
-    <!-- Main Content Area -->
-    <main class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
-        <div id="loading-indicator" class="text-center text-gray-600 my-8 hidden">
-            <div class="animate-spin inline-block w-8 h-8 border-4 border-yellow-500 border-t-transparent rounded-full"></div>
-            <p class="mt-2">Loading Vinyl Collection...</p>
-        </div>
-        
-        <div id="no-results-message" class="text-center text-gray-600 my-8 hidden">
-             No records found matching your criteria. Try adjusting your search.
-        </div>
+    <!-- Message Box (Error/Success Notifications) -->
+    <div id="message-box" class="message-box fixed top-4 right-4 z-50 p-3 rounded-lg shadow-lg text-white hidden"></div>
 
-        <!-- Record Grid -->
-        <div id="record-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-            <!-- Cards will be injected here by JavaScript -->
+    <!-- Loading Indicator -->
+    <div id="loading-indicator" class="text-center py-12 text-lg text-gray-500 hidden">
+        <svg class="animate-spin h-8 w-8 text-gray-500 mx-auto mb-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        Loading collection data...
+    </div>
+
+    <!-- Main Content Grid -->
+    <main class="max-w-6xl mx-auto">
+        <div id="no-results-message" class="text-center py-12 text-lg text-gray-500 hidden">
+            No records found matching your criteria.
+        </div>
+        <div id="record-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <!-- Record cards will be dynamically inserted here by JavaScript -->
         </div>
     </main>
 
-    <!-- Filter Modal (Hidden by Default) -->
-    <div id="filter-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 z-50 flex items-center justify-center p-4">
-        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 transform transition duration-300 scale-100">
-            <div class="flex justify-between items-center border-b pb-3 mb-4">
-                <h2 class="text-2xl font-bold text-gray-900">Filter Collection</h2>
-                <button id="close-modal-button" class="text-gray-400 hover:text-gray-600">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                </button>
-            </div>
+    <!-- Filter Modal (Hidden by default) -->
+    <div id="filter-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-40 p-4 transition-opacity duration-300">
+        <div class="bg-white rounded-xl p-6 w-full max-w-md shadow-2xl transform transition-all duration-300 scale-100">
+            <h2 class="text-2xl font-bold mb-4 text-gray-800">Filter Collection</h2>
             
+            <!-- Filter Form -->
             <div class="space-y-4">
-                <!-- Filter by Format -->
                 <div>
-                    <label for="filter-format" class="block text-sm font-medium text-gray-700 mb-2">Format</label>
-                    <select id="filter-format" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-yellow-500 focus:border-yellow-500">
+                    <label for="filter-format" class="block text-sm font-medium text-gray-700 mb-1">Format</label>
+                    <select id="filter-format" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
                         <option value="">All Formats</option>
-                        <option value="LP">LP (12")</option>
-                        <option value="7">7" Single</option>
-                        <option value="10">10"</option>
-                        <option value="Cassette">Cassette</option>
+                        <option value="LP">LP (33 RPM)</option>
+                        <option value="7">7" Single (45 RPM)</option>
                         <option value="CD">CD</option>
+                        <option value="Digital">Digital</option>
                     </select>
                 </div>
 
-                <!-- Filter by Release Year Range -->
-                <div class="flex space-x-4">
-                    <div class="flex-1">
-                        <label for="filter-year-from" class="block text-sm font-medium text-gray-700 mb-2">Year From</label>
-                        <input type="number" id="filter-year-from" placeholder="e.g., 1970" 
-                               class="w-full p-2 border border-gray-300 rounded-lg focus:ring-yellow-500 focus:border-yellow-500">
-                    </div>
-                    <div class="flex-1">
-                        <label for="filter-year-to" class="block text-sm font-medium text-gray-700 mb-2">Year To</label>
-                        <input type="number" id="filter-year-to" placeholder="e.g., 1985" 
-                               class="w-full p-2 border border-gray-300 rounded-lg focus:ring-yellow-500 focus:border-yellow-500">
-                    </div>
-                </div>
-
-                <!-- Reset Button -->
                 <div>
-                    <button id="reset-filter-button" class="w-full bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg shadow-md transition duration-150 transform hover:scale-[1.01]">
-                        Reset Filters
-                    </button>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Release Year Range</label>
+                    <div class="flex space-x-3">
+                        <input type="number" id="filter-year-from" placeholder="From (e.g., 1980)" min="1900" max="2099" class="w-1/2 p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"/>
+                        <input type="number" id="filter-year-to" placeholder="To (e.g., 2005)" min="1900" max="2099" class="w-1/2 p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"/>
+                    </div>
                 </div>
             </div>
 
-            <!-- Apply Button -->
-            <div class="mt-6">
-                <button id="apply-filter-button" class="w-full bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-bold py-3 px-4 rounded-lg shadow-md transition duration-150 transform hover:scale-105">
+            <!-- Modal Actions -->
+            <div class="mt-6 flex justify-between space-x-3">
+                <button id="reset-filter-button" class="flex-grow p-2 bg-gray-200 text-gray-700 font-medium rounded-xl hover:bg-gray-300 transition duration-150">
+                    Reset Filters
+                </button>
+                <button id="apply-filter-button" class="flex-grow p-2 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition duration-150">
                     Apply Filters
+                </button>
+                <button id="close-modal-button" class="p-2 bg-red-500 text-white font-semibold rounded-xl hover:bg-red-600 transition duration-150">
+                    Close
                 </button>
             </div>
         </div>
     </div>
+    
+    <!-- UPDATED: Add Record Modal -->
+    <div id="add-record-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-40 p-4 transition-opacity duration-300">
+        <div class="bg-white rounded-xl p-6 w-full max-w-lg shadow-2xl transform transition-all duration-300 scale-100">
+            <h2 class="text-2xl font-bold mb-4 text-gray-800">Add New Record to Collection</h2>
+            
+            <form id="add-record-form" class="space-y-4">
+                <!-- Artist Name -->
+                <div>
+                    <label for="record-artist" class="block text-sm font-medium text-gray-700 mb-1 required">Artist Name</label>
+                    <input type="text" id="record-artist" required placeholder="e.g., Fleetwood Mac" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"/>
+                </div>
 
+                <!-- Album Title -->
+                <div>
+                    <label for="record-title" class="block text-sm font-medium text-gray-700 mb-1 required">Album Title</label>
+                    <input type="text" id="record-title" required placeholder="e.g., Rumours" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"/>
+                </div>
 
-    <!-- FIX: Updated path to reflect the new location of app.js -->
+                <div class="grid grid-cols-2 gap-4">
+                    <!-- Release Year -->
+                    <div>
+                        <label for="record-year" class="block text-sm font-medium text-gray-700 mb-1 required">Release Year</label>
+                        <input type="number" id="record-year" required placeholder="e.g., 1977" min="1900" max="2099" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"/>
+                    </div>
+
+                    <!-- Format -->
+                    <div>
+                        <label for="record-format" class="block text-sm font-medium text-gray-700 mb-1 required">Format</label>
+                        <select id="record-format" required class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 bg-white">
+                            <option value="LP">LP (33 RPM)</option>
+                            <option value="7">7" Single (45 RPM)</option>
+                            <option value="CD">CD</option>
+                            <option value="Digital">Digital</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <!-- Current Value -->
+                    <div>
+                        <label for="record-value" class="block text-sm font-medium text-gray-700 mb-1">Current Value (USD)</label>
+                        <input type="number" id="record-value" placeholder="e.g., 35.00" min="0" step="0.01" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"/>
+                    </div>
+
+                    <!-- Catalog Number -->
+                    <div>
+                        <label for="record-catalog" class="block text-sm font-medium text-gray-700 mb-1">Catalog Number</label>
+                        <input type="text" id="record-catalog" placeholder="e.g., BSK 3010" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"/>
+                    </div>
+                </div>
+
+                <!-- Modal Actions -->
+                <div class="mt-6 pt-4 border-t border-gray-200 flex justify-end space-x-3">
+                    <button type="button" id="close-add-modal-button" class="p-3 px-6 bg-gray-200 text-gray-700 font-semibold rounded-xl hover:bg-gray-300 transition duration-150">
+                        Cancel
+                    </button>
+                    <button type="submit" id="submit-record-button" class="p-3 px-6 bg-green-600 text-white font-semibold rounded-xl shadow-md hover:bg-green-700 transition duration-150 transform hover:scale-[1.02] active:scale-95">
+                        Save Record
+                    </button>
+                </div>
+            </form>
+
+        </div>
+    </div>
+
+    <!-- Load JavaScript Module -->
     <script type="module" src="assets/js/app.js"></script>
 </body>
 </html>
