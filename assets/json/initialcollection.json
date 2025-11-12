@@ -1,0 +1,562 @@
+[
+  {
+    "id": 1,
+    "artist": "Led Zeppelin",
+    "title": "In Through the Out Door",
+    "original_release_year": "1979",
+    "label": "Swan Song",
+    "catalog_no": "SS 16002",
+    "estimated_value_low": 20.00,
+    "estimated_value_high": 40.00
+  },
+  {
+    "id": 2,
+    "artist": "Led Zeppelin",
+    "title": "Led Zeppelin II",
+    "original_release_year": "1969",
+    "label": "Atlantic",
+    "catalog_no": "SD 8236",
+    "estimated_value_low": 25.00,
+    "estimated_value_high": 50.00
+  },
+  {
+    "id": 3,
+    "artist": "Led Zeppelin",
+    "title": "Led Zeppelin IV (ZOSO)",
+    "original_release_year": "1971",
+    "label": "Atlantic",
+    "catalog_no": "SD 7208",
+    "estimated_value_low": 25.00,
+    "estimated_value_high": 50.00
+  },
+  {
+    "id": 4,
+    "artist": "Prince",
+    "title": "1999",
+    "original_release_year": "1982",
+    "label": "Warner Bros. Records",
+    "catalog_no": "1-23720",
+    "estimated_value_low": 30.00,
+    "estimated_value_high": 60.00
+  },
+  {
+    "id": 5,
+    "artist": "Prince",
+    "title": "Purple Rain (Soundtrack)",
+    "original_release_year": "1984",
+    "label": "Warner Bros. Records",
+    "catalog_no": "1-25110",
+    "estimated_value_low": 20.00,
+    "estimated_value_high": 40.00
+  },
+  {
+    "id": 6,
+    "artist": "Jefferson Airplane",
+    "title": "Thirty Seconds Over Winterland (Live)",
+    "original_release_year": "1973",
+    "label": "Grunt/RCA",
+    "catalog_no": "BFL1-0147",
+    "estimated_value_low": 15.00,
+    "estimated_value_high": 30.00
+  },
+  {
+    "id": 7,
+    "artist": "Jefferson Starship",
+    "title": "Red Octopus",
+    "original_release_year": "1975",
+    "label": "Grunt/RCA",
+    "catalog_no": "BFL1-0999",
+    "estimated_value_low": 10.00,
+    "estimated_value_high": 25.00
+  },
+  {
+    "id": 8,
+    "artist": "John Cougar Mellencamp",
+    "title": "Scarecrow",
+    "original_release_year": "1985",
+    "label": "Riva Records",
+    "catalog_no": "422-824 865-1 M-1",
+    "estimated_value_low": 15.00,
+    "estimated_value_high": 30.00
+  },
+  {
+    "id": 9,
+    "artist": "John Cougar Mellencamp",
+    "title": "American Fool",
+    "original_release_year": "1982",
+    "label": "Riva Records",
+    "catalog_no": "RVL 7501",
+    "estimated_value_low": 15.00,
+    "estimated_value_high": 30.00
+  },
+  {
+    "id": 10,
+    "artist": "AC/DC",
+    "title": "Back in Black",
+    "original_release_year": "1980",
+    "label": "Atlantic",
+    "catalog_no": "SD 16018",
+    "estimated_value_low": 25.00,
+    "estimated_value_high": 50.00
+  },
+  {
+    "id": 11,
+    "artist": "Huey Lewis and the News",
+    "title": "Sports",
+    "original_release_year": "1983",
+    "label": "Chrysalis",
+    "catalog_no": "FV 41412",
+    "estimated_value_low": 10.00,
+    "estimated_value_high": 25.00
+  },
+  {
+    "id": 12,
+    "artist": "Grateful Dead",
+    "title": "Aoxomoxoa",
+    "original_release_year": "1969",
+    "label": "Warner Bros. Records",
+    "catalog_no": "WS 1790",
+    "estimated_value_low": 30.00,
+    "estimated_value_high": 60.00
+  },
+  {
+    "id": 13,
+    "artist": "The Monkees",
+    "title": "More of The Monkees (MONO)",
+    "original_release_year": "1967",
+    "label": "Colgems",
+    "catalog_no": "COM-102",
+    "estimated_value_low": 20.00,
+    "estimated_value_high": 40.00
+  },
+  {
+    "id": 14,
+    "artist": "The Monkees",
+    "title": "Pisces, Aquarius, Capricorn & Jones Ltd.",
+    "original_release_year": "1967",
+    "label": "Colgems",
+    "catalog_no": "COS-104",
+    "estimated_value_low": 15.00,
+    "estimated_value_high": 30.00
+  },
+  {
+    "id": 15,
+    "artist": "The Beach Boys",
+    "title": "Endless Summer",
+    "original_release_year": "1974",
+    "label": "Capitol Records",
+    "catalog_no": "SVBB-11307",
+    "estimated_value_low": 15.00,
+    "estimated_value_high": 30.00
+  },
+  {
+    "id": 16,
+    "artist": "The Beach Boys",
+    "title": "The Beach Boys Love You",
+    "original_release_year": "1977",
+    "label": "Brother/Reprise",
+    "catalog_no": "MS 2251",
+    "estimated_value_low": 25.00,
+    "estimated_value_high": 50.00
+  },
+  {
+    "id": 17,
+    "artist": "The Beach Boys",
+    "title": "Spirit of America",
+    "original_release_year": "1975",
+    "label": "Capitol Records",
+    "catalog_no": "SVBB-11384",
+    "estimated_value_low": 10.00,
+    "estimated_value_high": 25.00
+  },
+  {
+    "id": 18,
+    "artist": "Boston",
+    "title": "Boston (Self-Titled)",
+    "original_release_year": "1976",
+    "label": "Epic",
+    "catalog_no": "JE 34188",
+    "estimated_value_low": 15.00,
+    "estimated_value_high": 35.00
+  },
+  {
+    "id": 19,
+    "artist": "Fleetwood Mac",
+    "title": "Rumours",
+    "original_release_year": "1977",
+    "label": "Warner Bros. Records",
+    "catalog_no": "BSK 3010",
+    "estimated_value_low": 25.00,
+    "estimated_value_high": 50.00
+  },
+  {
+    "id": 20,
+    "artist": "Joni Mitchell",
+    "title": "Hejira",
+    "original_release_year": "1976",
+    "label": "Asylum Records",
+    "catalog_no": "TE-1087",
+    "estimated_value_low": 30.00,
+    "estimated_value_high": 60.00
+  },
+  {
+    "id": 21,
+    "artist": "Jim Croce",
+    "title": "You Don't Mess Around With Jim",
+    "original_release_year": "1972",
+    "label": "ABC Records",
+    "catalog_no": "ABCX 756",
+    "estimated_value_low": 10.00,
+    "estimated_value_high": 25.00
+  },
+  {
+    "id": 22,
+    "artist": "Jim Croce",
+    "title": "Life and Times",
+    "original_release_year": "1973",
+    "label": "ABC Records",
+    "catalog_no": "ABCX 769",
+    "estimated_value_low": 10.00,
+    "estimated_value_high": 25.00
+  },
+  {
+    "id": 23,
+    "artist": "Boz Scaggs",
+    "title": "Boz Scaggs & Band",
+    "original_release_year": "1971",
+    "label": "Columbia",
+    "catalog_no": "C 30796",
+    "estimated_value_low": 10.00,
+    "estimated_value_high": 20.00
+  },
+  {
+    "id": 24,
+    "artist": "The Pretenders",
+    "title": "Learning to Crawl",
+    "original_release_year": "1983",
+    "label": "Sire/WEA",
+    "catalog_no": "1-23980",
+    "estimated_value_low": 15.00,
+    "estimated_value_high": 30.00
+  },
+  {
+    "id": 25,
+    "artist": "Talk Talk",
+    "title": "It's My Life",
+    "original_release_year": "1984",
+    "label": "EMI America",
+    "catalog_no": "SJ-17117",
+    "estimated_value_low": 25.00,
+    "estimated_value_high": 50.00
+  },
+  {
+    "id": 26,
+    "artist": "Janis Joplin",
+    "title": "Janis Joplin's Greatest Hits",
+    "original_release_year": "1973",
+    "label": "Columbia",
+    "catalog_no": "PC 32168",
+    "estimated_value_low": 15.00,
+    "estimated_value_high": 30.00
+  },
+  {
+    "id": 27,
+    "artist": "Billy Joel",
+    "title": "Piano Man",
+    "original_release_year": "1973",
+    "label": "Columbia",
+    "catalog_no": "KC 32544",
+    "estimated_value_low": 15.00,
+    "estimated_value_high": 30.00
+  },
+  {
+    "id": 28,
+    "artist": "Foreigner",
+    "title": "4",
+    "original_release_year": "1981",
+    "label": "Atlantic",
+    "catalog_no": "SD 16999",
+    "estimated_value_low": 10.00,
+    "estimated_value_high": 25.00
+  },
+  {
+    "id": 29,
+    "artist": "Carole King",
+    "title": "Tapestry",
+    "original_release_year": "1971",
+    "label": "Ode Records",
+    "catalog_no": "SP-77009",
+    "estimated_value_low": 20.00,
+    "estimated_value_high": 40.00
+  },
+  {
+    "id": 30,
+    "artist": "REO Speedwagon",
+    "title": "Hi Infidelity",
+    "original_release_year": "1980",
+    "label": "Epic",
+    "catalog_no": "FE 36844",
+    "estimated_value_low": 10.00,
+    "estimated_value_high": 25.00
+  },
+  {
+    "id": 31,
+    "artist": "Blue Öyster Cult",
+    "title": "Agents of Fortune",
+    "original_release_year": "1976",
+    "label": "Columbia",
+    "catalog_no": "PC 34164",
+    "estimated_value_low": 20.00,
+    "estimated_value_high": 40.00
+  },
+  {
+    "id": 32,
+    "artist": "Deep Purple",
+    "title": "Machine Head",
+    "original_release_year": "1972",
+    "label": "Warner Bros. Records",
+    "catalog_no": "BS 2607",
+    "estimated_value_low": 20.00,
+    "estimated_value_high": 40.00
+  },
+  {
+    "id": 33,
+    "artist": "Various Artists",
+    "title": "An All-Star Christmas (Promo, Mono)",
+    "original_release_year": "1959",
+    "label": "Columbia",
+    "catalog_no": "CL 1391",
+    "estimated_value_low": 30.00,
+    "estimated_value_high": 60.00
+  },
+  {
+    "id": 34,
+    "artist": "The Monkees",
+    "title": "The Monkees (Self-Titled)",
+    "original_release_year": "1966",
+    "label": "Colgems",
+    "catalog_no": "COS-101",
+    "estimated_value_low": 15.00,
+    "estimated_value_high": 30.00
+  },
+  {
+    "id": 35,
+    "artist": "Art Garfunkel",
+    "title": "Breakaway",
+    "original_release_year": "1975",
+    "label": "Columbia",
+    "catalog_no": "PC 33700",
+    "estimated_value_low": 10.00,
+    "estimated_value_high": 20.00
+  },
+  {
+    "id": 36,
+    "artist": "Bruce Springsteen & The E Street Band",
+    "title": "Live/1975-85 (5-Record Box Set)",
+    "original_release_year": "1986",
+    "label": "Columbia",
+    "catalog_no": "C5X 40558",
+    "estimated_value_low": 40.00,
+    "estimated_value_high": 80.00
+  },
+  {
+    "id": 37,
+    "artist": "Johnny Cash",
+    "title": "Country Classics",
+    "original_release_year": "1972",
+    "label": "CSP (Columbia Special Products)",
+    "catalog_no": "P 16915",
+    "estimated_value_low": 10.00,
+    "estimated_value_high": 25.00
+  },
+  {
+    "id": 38,
+    "artist": "Electric Light Orchestra",
+    "title": "Face the Music",
+    "original_release_year": "1975",
+    "label": "United Artists Records",
+    "catalog_no": "UA-LA546-G",
+    "estimated_value_low": 20.00,
+    "estimated_value_high": 35.00
+  },
+  {
+    "id": 39,
+    "artist": "The Cars",
+    "title": "Heartbeat City",
+    "original_release_year": "1984",
+    "label": "Elektra Records",
+    "catalog_no": "60296-1",
+    "estimated_value_low": 15.00,
+    "estimated_value_high": 30.00
+  },
+  {
+    "id": 40,
+    "artist": "Fleetwood Mac",
+    "title": "Mirage",
+    "original_release_year": "1982",
+    "label": "Warner Bros. Records",
+    "catalog_no": "W1 23607",
+    "estimated_value_low": 15.00,
+    "estimated_value_high": 35.00
+  },
+  {
+    "id": 41,
+    "artist": "Aerosmith",
+    "title": "Toys in the Attic",
+    "original_release_year": "1975",
+    "label": "Columbia Records",
+    "catalog_no": "JC 33479",
+    "estimated_value_low": 25.00,
+    "estimated_value_high": 50.00
+  },
+  {
+    "id": 42,
+    "artist": "Aerosmith",
+    "title": "Done with Mirrors",
+    "original_release_year": "1985",
+    "label": "Geffen Records",
+    "catalog_no": "GHS 24091",
+    "estimated_value_low": 15.00,
+    "estimated_value_high": 30.00
+  },
+  {
+    "id": 43,
+    "artist": "Bryan Adams",
+    "title": "Reckless",
+    "original_release_year": "1984",
+    "label": "A&M Records",
+    "catalog_no": "SP-5013",
+    "estimated_value_low": 15.00,
+    "estimated_value_high": 30.00
+  },
+  {
+    "id": 44,
+    "artist": "Blondie",
+    "title": "The Hunter",
+    "original_release_year": "1982",
+    "label": "Chrysalis Records",
+    "catalog_no": "CHR 1384",
+    "estimated_value_low": 10.00,
+    "estimated_value_high": 25.00
+  },
+  {
+    "id": 45,
+    "artist": "Stevie Nicks",
+    "title": "Bella Donna",
+    "original_release_year": "1981",
+    "label": "Modern Records",
+    "catalog_no": "MR 38-139",
+    "estimated_value_low": 25.00,
+    "estimated_value_high": 45.00
+  },
+  {
+    "id": 46,
+    "artist": "The Honeydrippers",
+    "title": "Volume One (EP)",
+    "original_release_year": "1984",
+    "label": "Es Paranza/Atlantic Records",
+    "catalog_no": "90220-1-B",
+    "estimated_value_low": 10.00,
+    "estimated_value_high": 20.00
+  },
+  {
+    "id": 47,
+    "artist": "The Everly Brothers",
+    "title": "Featuring Wake Up Little Susie (Compilation)",
+    "original_release_year": "Circa 1969",
+    "label": "Harmony Records",
+    "catalog_no": "HS 11304",
+    "estimated_value_low": 10.00,
+    "estimated_value_high": 25.00
+  },
+  {
+    "id": 48,
+    "artist": "Sheila E.",
+    "title": "The Glamorous Life",
+    "original_release_year": "1984",
+    "label": "Warner Bros. Records",
+    "catalog_no": "1-25107",
+    "estimated_value_low": 15.00,
+    "estimated_value_high": 30.00
+  },
+  {
+    "id": 49,
+    "artist": "John Cafferty and the Beaver Brown Band",
+    "title": "Eddie and the Cruisers (Soundtrack)",
+    "original_release_year": "1983",
+    "label": "Scotti Brothers Records",
+    "catalog_no": "FZ 38929",
+    "estimated_value_low": 10.00,
+    "estimated_value_high": 25.00
+  },
+  {
+    "id": 50,
+    "artist": "Kathy Mattea",
+    "title": "From My Heart",
+    "original_release_year": "1985",
+    "label": "Mercury Records",
+    "catalog_no": "422-824 308-1 M-1",
+    "estimated_value_low": 8.00,
+    "estimated_value_high": 15.00
+  },
+  {
+    "id": 51,
+    "artist": "Lander Ballard",
+    "title": "High Time",
+    "original_release_year": "1977",
+    "label": "Free Wind Records",
+    "catalog_no": "LB7701",
+    "estimated_value_low": 15.00,
+    "estimated_value_high": 30.00
+  },
+  {
+    "id": 52,
+    "artist": "The Beach Boys",
+    "title": "The Beach Boys' Greatest Hits",
+    "original_release_year": "1981",
+    "label": "Capitol Records",
+    "catalog_no": "SQ-16200",
+    "estimated_value_low": 10.00,
+    "estimated_value_high": 20.00
+  },
+  {
+    "id": 53,
+    "artist": "Deep Purple",
+    "title": "Burn",
+    "original_release_year": "1974",
+    "label": "Warner Bros. Records",
+    "catalog_no": "W 2766",
+    "estimated_value_low": 15.00,
+    "estimated_value_high": 30.00
+  },
+  {
+    "id": 54,
+    "artist": "The Monkees",
+    "title": "Head",
+    "original_release_year": "1968",
+    "label": "Colgems",
+    "catalog_no": "COS-105",
+    "estimated_value_low": 25.00,
+    "estimated_value_high": 50.00
+  },
+  {
+    "id": 55,
+    "artist": "Angel City",
+    "title": "Darkroom",
+    "original_release_year": "1980",
+    "label": "Epic",
+    "catalog_no": "JE 36543",
+    "estimated_value_low": 10.00,
+    "estimated_value_high": 20.00
+  },
+  {
+    "id": 56,
+    "artist": "The Four Tops",
+    "title": "Keeper of the Castle",
+    "original_release_year": "1972",
+    "label": "Dunhill / ABC Records",
+    "catalog_no": "DSX-50129",
+    "estimated_value_low": 10.00,
+    "estimated_value_high": 20.00
+  }
+]
