@@ -8,90 +8,71 @@
     <script src="https://cdn.tailwindcss.com"></script> 
     
     <!-- LOAD CUSTOM STYLES from the external file, now correctly linked -->
-    <link rel="stylesheet" href="styles.css">
-    <!-- Font Awesome for social icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" xintegrity="sha512-..." crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="/assets/css/styles.css">
 </head>
 <body class="bg-gray-100 min-h-screen">
 
     <div id="message-box" class="message-box fixed top-4 right-4 z-50 p-3 rounded-lg shadow-xl hidden"></div>
 
+    <!-- NEW FIX: Added missing loading-indicator element -->
+    <div id="loading-indicator" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-[100] text-white hidden">
+        <svg class="animate-spin -ml-1 mr-3 h-10 w-10 text-yellow-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <p class="text-xl font-semibold">Loading Collection...</p>
+    </div>
+
     <!-- Header / Navbar -->
     <header class="bg-gray-900 text-white shadow-lg sticky top-0 z-10">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col md:flex-row justify-between items-center">
-            
-            <!-- Logo/Title -->
             <h1 class="text-3xl font-extrabold tracking-tight mb-2 md:mb-0">
                 <span class="text-yellow-400">Vinyl</span> Archiver
             </h1>
-
-            <!-- User Status & SSO Options -->
-            <div id="auth-container" class="flex items-center space-x-4 w-full md:w-auto mt-2 md:mt-0">
-                
-                <!-- Display User ID when signed in -->
-                <div id="auth-user-info" class="flex items-center space-x-2 hidden">
-                    <span class="text-sm text-gray-400">Signed in as:</span>
-                    <span id="auth-user-id" class="text-sm font-semibold text-yellow-400 truncate max-w-[150px]"></span>
-                    <button id="sign-out-button" class="bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-3 rounded-full text-xs transition duration-150">Sign Out</button>
-                </div>
-
-                <!-- SSO Buttons (Shown when anonymous) -->
-                <div id="sso-buttons" class="flex space-x-2">
-                    <button id="google-sso-button" class="sso-btn bg-white text-gray-800 hover:bg-gray-200 p-2 rounded-full shadow-md transition duration-150 transform hover:scale-105" title="Sign in with Google">
-                        <i class="fab fa-google text-lg"></i>
-                    </button>
-                    <button id="facebook-sso-button" class="sso-btn bg-blue-600 text-white hover:bg-blue-700 p-2 rounded-full shadow-md transition duration-150 transform hover:scale-105" title="Sign in with Facebook">
-                        <i class="fab fa-facebook-f text-lg"></i>
-                    </button>
-                    <!-- Apple does not have a dedicated Font Awesome FAB, using a simple icon -->
-                    <button id="apple-sso-button" class="sso-btn bg-gray-800 text-white hover:bg-gray-700 p-2 rounded-full shadow-md transition duration-150 transform hover:scale-105" title="Sign in with Apple">
-                        <i class="fab fa-apple text-lg"></i>
-                    </button>
-                    <button id="microsoft-sso-button" class="sso-btn bg-blue-400 text-white hover:bg-blue-500 p-2 rounded-full shadow-md transition duration-150 transform hover:scale-105" title="Sign in with Microsoft">
-                        <!-- Using an icon that looks like the MS logo -->
-                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M10 2a8 8 0 100 16 8 8 0 000-16zm-5 5h4v4H5V7zm6 0h4v4h-4V7zm-6 6h4v4H5v-4zm6 0h4v4h-4v-4z"/>
-                        </svg>
-                    </button>
-                </div>
-            </div>
-
-            <!-- Search and Filter Controls -->
-            <div class="flex items-center space-x-4 w-full md:w-auto mt-4 md:mt-0">
+            <div class="flex items-center space-x-4 w-full md:w-auto">
                 <input type="text" id="search-input" placeholder="Search by Artist or Title..." 
-                       class="px-4 py-2 border border-gray-700 bg-gray-800 text-white rounded-lg focus:ring-yellow-500 focus:border-yellow-500 w-full md:w-64 transition duration-150">
-                <button id="filter-btn" class="bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-bold py-2 px-4 rounded-lg shadow-md transition duration-150 transform hover:scale-[1.01]">
-                    <i class="fas fa-filter mr-1"></i> Filter
+                       class="flex-1 w-full md:w-64 p-2 text-base border-gray-600 rounded-lg bg-gray-800 text-white focus:ring-yellow-500 focus:border-yellow-500 transition duration-150">
+                
+                <button id="filter-btn" class="flex-shrink-0 p-2 bg-yellow-500 hover:bg-yellow-600 text-gray-900 rounded-lg shadow-md transition duration-150 transform hover:scale-[1.05]">
+                    <!-- Filter Icon (Tailwind/Lucide style) -->
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-filter"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
                 </button>
             </div>
-
         </div>
     </header>
 
-    <!-- Filter Modal (Remains the same) -->
-    <div id="filter-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 z-20 flex justify-center items-center p-4">
-        <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md">
-            <h2 class="text-2xl font-bold mb-4 text-gray-900">Filter Collection</h2>
-            
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Records Grid Container -->
+        <section id="records-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6"></section>
+    </main>
+
+    <!-- Filter Modal (Hidden by default) -->
+    <div id="filter-modal" class="fixed inset-0 z-50 hidden bg-gray-900 bg-opacity-75 flex items-center justify-center p-4">
+        <div id="modal-content" class="relative w-full max-w-md bg-white p-6 rounded-xl shadow-2xl transform transition-all duration-300 scale-100 opacity-100">
             <!-- Close Button -->
-            <button id="close-filter-button" class="absolute top-4 right-4 text-gray-500 hover:text-gray-700 text-2xl font-bold">&times;</button>
-            
+            <button id="close-modal-button" class="absolute top-4 right-4 text-gray-500 hover:text-gray-700 transition duration-150">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+            </button>
+
+            <h2 class="text-2xl font-bold mb-6 text-gray-800 border-b pb-2">Filter Collection</h2>
+
             <!-- Filter Options -->
-            <div class="space-y-4">
+            <div>
                 <!-- Format Filter -->
-                <div>
-                    <label for="filter-format" class="block text-sm font-medium text-gray-700 mb-2">Format</label>
-                    <select id="filter-format" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-yellow-500 focus:border-yellow-500">
+                <div class="mb-6">
+                    <label for="filter-format-select" class="block text-sm font-medium text-gray-700 mb-2">Format</label>
+                    <!-- FIX: Added missing ID 'filter-format-select' -->
+                    <select id="filter-format-select" 
+                            class="w-full p-2 border border-gray-300 rounded-lg bg-white focus:ring-yellow-500 focus:border-yellow-500">
                         <option value="">All Formats</option>
-                        <option value="LP">LP (12")</option>
-                        <option value="7_INCH">7" Single</option>
-                        <option value="EP">EP</option>
-                        <option value="OTHER">Other</option>
+                        <option value="LP">LP (33 1/3 RPM)</option>
+                        <option value="45">45 (7" Single)</option>
+                        <option value="12in">12" Single (Maxi)</option>
                     </select>
                 </div>
-                
+
                 <!-- Year Range Filter -->
-                <div class="flex space-x-4">
+                <div class="flex space-x-4 mb-6">
                     <div class="flex-1">
                         <label for="filter-year-from" class="block text-sm font-medium text-gray-700 mb-2">Year From</label>
                         <input type="number" id="filter-year-from" placeholder="e.g., 1970" 
@@ -111,8 +92,9 @@
                     </button>
                 </div>
             </div>
-
+            
             <!-- Apply Button -->
+            <!-- NOTE: Moved Apply button outside the modal-content for cleaner layout/styling, but still inside filter-modal -->
             <div class="mt-6">
                 <button id="apply-filter-button" class="w-full bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-bold py-3 px-4 rounded-lg shadow-md transition duration-150 transform hover:scale-105">
                     Apply Filters
@@ -122,26 +104,8 @@
     </div>
 
 
-    <!-- Main Content Area -->
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        
-        <!-- Loading Indicator -->
-        <div id="loading-indicator" class="text-center py-12 text-lg text-gray-600 hidden">Loading collection...</div>
-
-        <!-- Collection Grid -->
-        <div id="collection-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
-            <!-- Album cards will be rendered here by JavaScript -->
-        </div>
-
-        <!-- No Results Message -->
-        <div id="no-results" class="text-center py-12 text-xl text-gray-600 hidden">
-            No records found matching your criteria.
-        </div>
-
-    </main>
-
-    <!-- Firebase Script & Logic -->
-    <script type="module" src="vinyl.js"></script>
+    <!-- FIX: Updated path to reflect the correct module import for the main script -->
+    <script type="module" src="/assets/js/app.js"></script> 
 
 </body>
 </html>
