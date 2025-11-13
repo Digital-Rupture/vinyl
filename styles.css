@@ -1,116 +1,106 @@
+/* --- The Modern Turntable Color Palette --- /
 :root {
-    /* --- The Modern Turntable Color Palette --- */
-    --color-background: #1A1A1A;     /* Deep charcoal / Near-black for the main body */
-    --color-surface: #262626;        /* Slightly lighter surface for cards/containers (The 'turntable' surface) */
-    --color-text-primary: #E0E0E0;   /* Light gray for main text, highly legible */
-    --color-text-secondary: #999999; /* Muted gray for small details, like artist names */
-    --color-accent-copper: #B87333;  /* Copper/Bronze for headings, buttons, and highlights */
-    --color-accent-teal: #00ADB5;    /* A secondary, sleek teal for interactive elements */
+--color-background: #1A1A1A;     / Deep charcoal / Near-black for the main body /
+--color-surface: #262626;        / Slightly lighter surface for cards/containers (The 'turntable' surface) /
+--color-text-primary: #E0E0E0;   / Light gray for main text, highly legible /
+--color-text-secondary: #999999; / Muted gray for small details, like artist names /
+--color-accent-copper: #B87333;  / Copper/Bronze for headings, buttons, and highlights /
+--color-accent-teal: #00ADB5;    / A secondary, sleek teal for interactive elements */
 
-    /* --- Semantic Colors (for the Value Indicator feature) --- */
-    --color-value-high: #D32F2F;     /* Red for high value */
-    --color-value-mid: #FFC107;      /* Yellow/Amber for mid value */
-    --color-value-low: #4CAF50;      /* Green for low value */
+/* --- Semantic Colors (for the Value Indicator feature) --- */
+--color-value-high: #D32F2F;     /* Red for high value */
+--color-value-mid: #FFC107;      /* Yellow/Amber for mid value */
+--color-value-low: #4CAF50;      /* Green for low value */
 
-    /* --- Typography Variables --- */
-    /* Using a geometric font (Poppins is a great, free choice) */
-    --font-heading: 'Poppins', sans-serif; 
-    --font-body: 'DM Sans', sans-serif;
-    --font-size-base: 16px;
+/* --- Typography Variables --- */
+/* Using a geometric font (Poppins is a great, free choice) */
+--font-heading: 'Poppins', sans-serif; 
+--font-body: 'DM Sans', sans-serif;
+--font-size-base: 16px;
+
+
 }
 /* Import Google Fonts - Poppins for headings, DM Sans for body */
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@600&family=DM+Sans:wght@400;500;700&display=swap');
+@import url('https://www.google.com/search?q=https://fonts.googleapis.com/css%3Ffamily%3DPoppins:400,700|DM+Sans:400,500&display=swap');
 
-
-/* Apply global styles and variables from Tailwind */
+/* --- GLOBAL STYLES --- */
 body {
-    background-color: var(--color-background);
+font-family: var(--font-body);
+background-color: var(--color-background);
+color: var(--color-text-primary);
 }
 
-/* --- MESSAGE BOX --- */
+h1, h2 {
+font-family: var(--font-heading);
+}
 
+/* --- MESSAGE BOX --- /
 .message-box {
-    /* Base classes from Tailwind applied in JS: fixed top-4 right-4 z-50 p-3 rounded-lg shadow-xl */
-    font-weight: 600;
-    transition: all 0.3s ease-in-out;
+/ Using standard background/text to ensure it stands out */
+color: white;
+font-weight: 500;
+transition: all 0.3s ease;
 }
 
-
-/* --- ALBUM CARD STYLES --- */
-
+/* --- ALBUM CARD STYLES --- /
 .album-card {
-    /* Inherit dark theme from background and surface variables */
-    background-color: var(--color-surface);
-    border-radius: 8px;
-    overflow: hidden;
-    /* Subtle shadow for depth (optional, but adds to the sleek theme) */
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-    cursor: pointer;
+background-color: var(--color-surface);
+border-radius: 8px;
+overflow: hidden;
+/ Subtle shadow for depth (optional, but adds to the sleek theme) */
+box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+transition: transform 0.2s ease, box-shadow 0.2s ease;
+cursor: pointer;
 }
 
 .album-card:hover {
-    /* Interactive hover effect */
-    transform: translateY(-5px);
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.6);
+/* Interactive hover effect /
+transform: translateY(-5px);
+box-shadow: 0 8px 20px rgba(0, 0, 0, 0.6);
+}
+/ --- HEADER AND CONTROLS --- */
+
+header {
+padding: 1rem 0;
+border-bottom: 1px solid var(--color-surface); /* Subtle separator */
 }
 
-/* Ensure image takes up space nicely */
-.album-card img {
-    aspect-ratio: 1 / 1; /* Forces a square aspect ratio for album art */
+#controls {
+display: flex;
+gap: 15px;
+margin-top: 1.5rem;
 }
 
-/* --- TEXT COLORS --- */
-.album-title {
-    color: var(--color-accent-copper); /* Copper/gold color for main title */
-}
-.album-artist {
-    color: var(--color-text-secondary); /* Muted gray for secondary details */
-}
-
-/* --- VALUE INDICATORS (If implemented in the future) --- */
-.value-high {
-    border-left: 5px solid var(--color-value-high);
-}
-.value-mid {
-    border-left: 5px solid var(--color-value-mid);
-}
-.value-low {
-    border-left: 5px solid var(--color-value-low);
+#search-input, #filter-btn {
+padding: 10px 15px;
+border: 1px solid var(--color-text-secondary);
+border-radius: 4px;
+font-size: var(--font-size-base);
+transition: all 0.2s ease;
 }
 
-/* --- FILTER MODAL CUSTOMIZATION (For visibility) --- */
-/* The modal uses Tailwind but we ensure it contrasts well */
-#filter-modal > div {
-    /* Override Tailwind bg-white for a better dark-mode feel if needed, but keeping white for contrast here */
-    background-color: #f7f7f7;
-}
-
-/* Style for search and filter inputs to match the dark header */
 #search-input {
-    background-color: #333; 
-    border-color: #555;
-    color: #fff;
+flex-grow: 1; /* Allows the search bar to take up most of the space */
+background-color: var(--color-surface);
+color: var(--color-text-primary);
 }
+
 #search-input::placeholder {
-    color: #999;
+color: var(--color-text-secondary);
 }
 
-#filter-btn {
-    background-color: #333;
-    border-color: #555;
+/* --- SSO Buttons Custom Styles --- /
+/ Ensure the SSO buttons look sharp /
+.sso-btn {
+display: flex;
+justify-content: center;
+align-items: center;
+width: 40px;
+height: 40px;
+padding: 0; / Override tailwind padding /
+border: 1px solid transparent;
 }
-#filter-btn:hover {
-    background-color: #444;
-}
-
-/* Custom button style for the seed button (optional: make it stand out) */
-#seed-collection-btn {
-    background-color: #B87333; /* Use the copper accent color */
-    color: #1A1A1A;
-    font-weight: 700;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-}
-#seed-collection-btn:hover {
-    background-color: #D48844;
+.sso-btn:focus {
+outline: none;
+box-shadow: 0 0 0 3px rgba(255, 193, 7, 0.5); / Yellow focus ring */
 }
