@@ -7,72 +7,90 @@
     <!-- Load Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script> 
     
-    <!-- LOAD CUSTOM STYLES - Path fixed to root folder -->
-    <link rel="stylesheet" href="styles.css">
+    <!-- LOAD CUSTOM STYLES from the external file, now correctly linked -->
+    <link rel="stylesheet" href="/assets/css/styles.css">
+    <!-- Font Awesome for social icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" xintegrity="sha512-..." crossorigin="anonymous" referrerpolicy="no-referrer" />
 </head>
 <body class="bg-gray-100 min-h-screen">
 
-    <!-- Message Box for notifications (Replaces alert()) -->
     <div id="message-box" class="message-box fixed top-4 right-4 z-50 p-3 rounded-lg shadow-xl hidden"></div>
 
     <!-- Header / Navbar -->
     <header class="bg-gray-900 text-white shadow-lg sticky top-0 z-10">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col md:flex-row justify-between items-center">
+            
+            <!-- Logo/Title -->
             <h1 class="text-3xl font-extrabold tracking-tight mb-2 md:mb-0">
                 <span class="text-yellow-400">Vinyl</span> Archiver
             </h1>
-            <div class="flex items-center space-x-4 w-full md:w-auto">
+
+            <!-- User Status & SSO Options -->
+            <div id="auth-container" class="flex items-center space-x-4 w-full md:w-auto mt-2 md:mt-0">
+                
+                <!-- Display User ID when signed in -->
+                <div id="auth-user-info" class="flex items-center space-x-2 hidden">
+                    <span class="text-sm text-gray-400">Signed in as:</span>
+                    <span id="auth-user-id" class="text-sm font-semibold text-yellow-400 truncate max-w-[150px]"></span>
+                    <button id="sign-out-button" class="bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-3 rounded-full text-xs transition duration-150">Sign Out</button>
+                </div>
+
+                <!-- SSO Buttons (Shown when anonymous) -->
+                <div id="sso-buttons" class="flex space-x-2">
+                    <button id="google-sso-button" class="sso-btn bg-white text-gray-800 hover:bg-gray-200 p-2 rounded-full shadow-md transition duration-150 transform hover:scale-105" title="Sign in with Google">
+                        <i class="fab fa-google text-lg"></i>
+                    </button>
+                    <button id="facebook-sso-button" class="sso-btn bg-blue-600 text-white hover:bg-blue-700 p-2 rounded-full shadow-md transition duration-150 transform hover:scale-105" title="Sign in with Facebook">
+                        <i class="fab fa-facebook-f text-lg"></i>
+                    </button>
+                    <!-- Apple does not have a dedicated Font Awesome FAB, using a simple icon -->
+                    <button id="apple-sso-button" class="sso-btn bg-gray-800 text-white hover:bg-gray-700 p-2 rounded-full shadow-md transition duration-150 transform hover:scale-105" title="Sign in with Apple">
+                        <i class="fab fa-apple text-lg"></i>
+                    </button>
+                    <button id="microsoft-sso-button" class="sso-btn bg-blue-400 text-white hover:bg-blue-500 p-2 rounded-full shadow-md transition duration-150 transform hover:scale-105" title="Sign in with Microsoft">
+                        <!-- Using an icon that looks like the MS logo -->
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M10 2a8 8 0 100 16 8 8 0 000-16zm-5 5h4v4H5V7zm6 0h4v4h-4V7zm-6 6h4v4H5v-4zm6 0h4v4h-4v-4z"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Search and Filter Controls -->
+            <div class="flex items-center space-x-4 w-full md:w-auto mt-4 md:mt-0">
                 <input type="text" id="search-input" placeholder="Search by Artist or Title..." 
-                       class="text-gray-900 p-2 rounded-lg shadow-inner w-full md:w-64 focus:ring-yellow-500 focus:border-yellow-500 transition duration-150">
-                <button id="filter-btn" class="bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-bold py-2 px-4 rounded-lg shadow-md transition duration-150 transform hover:scale-105">
-                    Filter
+                       class="px-4 py-2 border border-gray-700 bg-gray-800 text-white rounded-lg focus:ring-yellow-500 focus:border-yellow-500 w-full md:w-64 transition duration-150">
+                <button id="filter-btn" class="bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-bold py-2 px-4 rounded-lg shadow-md transition duration-150 transform hover:scale-[1.01]">
+                    <i class="fas fa-filter mr-1"></i> Filter
                 </button>
             </div>
+
         </div>
     </header>
 
-    <!-- Main Content Area -->
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <!-- Collection Display Area -->
-        <div id="collection-grid" class="mt-8 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-            <!-- Album cards will be rendered here by JavaScript -->
-        </div>
-
-        <!-- Loading Indicator -->
-        <div id="loading-indicator" class="text-center mt-12 text-gray-700 text-xl hidden">Loading your collection...</div>
-
-        <!-- Empty State Message -->
-        <div id="empty-state" class="text-center mt-12 p-8 border-2 border-dashed border-gray-400 rounded-lg hidden">
-            <h3 class="text-2xl font-semibold text-gray-600">No Records Found</h3>
-            <p class="text-gray-500 mt-2">Try adjusting your search or filter criteria.</p>
-        </div>
-    </main>
-
-    <!-- Filter Modal (Hidden by Default) -->
-    <div id="filter-modal" class="fixed inset-0 bg-black bg-opacity-75 z-50 flex justify-center items-center hidden">
-        <div class="bg-white rounded-xl shadow-2xl p-6 w-11/12 max-w-md transform transition-all scale-100 md:scale-95">
+    <!-- Filter Modal (Remains the same) -->
+    <div id="filter-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 z-20 flex justify-center items-center p-4">
+        <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md">
+            <h2 class="text-2xl font-bold mb-4 text-gray-900">Filter Collection</h2>
             
-            <!-- Modal Header -->
-            <div class="flex justify-between items-center pb-4 border-b border-gray-200">
-                <h2 class="text-2xl font-bold text-gray-800">Advanced Filters</h2>
-                <button id="close-modal-button" class="text-gray-500 hover:text-gray-700 text-3xl leading-none">&times;</button>
-            </div>
-
-            <!-- Modal Body: Filter Options -->
-            <div class="mt-4 space-y-4 text-gray-800">
-
-                <!-- Format Filter (Placeholder for future feature) -->
+            <!-- Close Button -->
+            <button id="close-filter-button" class="absolute top-4 right-4 text-gray-500 hover:text-gray-700 text-2xl font-bold">&times;</button>
+            
+            <!-- Filter Options -->
+            <div class="space-y-4">
+                <!-- Format Filter -->
                 <div>
-                    <label for="filter-format" class="block text-sm font-medium text-gray-700 mb-2">Format (e.g., LP, 7", CD)</label>
+                    <label for="filter-format" class="block text-sm font-medium text-gray-700 mb-2">Format</label>
                     <select id="filter-format" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-yellow-500 focus:border-yellow-500">
-                        <option value="">All Formats (Placeholder)</option>
+                        <option value="">All Formats</option>
                         <option value="LP">LP (12")</option>
-                        <option value="7">Single (7")</option>
-                        <option value="CD">CD</option>
+                        <option value="7_INCH">7" Single</option>
+                        <option value="EP">EP</option>
+                        <option value="OTHER">Other</option>
                     </select>
                 </div>
-
-                <!-- Release Year Filter -->
+                
+                <!-- Year Range Filter -->
                 <div class="flex space-x-4">
                     <div class="flex-1">
                         <label for="filter-year-from" class="block text-sm font-medium text-gray-700 mb-2">Year From</label>
@@ -104,7 +122,26 @@
     </div>
 
 
-    <!-- Load the main application script (path fixed to root folder) -->
-    <script type="module" src="vinyl.js"></script> 
+    <!-- Main Content Area -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        <!-- Loading Indicator -->
+        <div id="loading-indicator" class="text-center py-12 text-lg text-gray-600 hidden">Loading collection...</div>
+
+        <!-- Collection Grid -->
+        <div id="collection-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
+            <!-- Album cards will be rendered here by JavaScript -->
+        </div>
+
+        <!-- No Results Message -->
+        <div id="no-results" class="text-center py-12 text-xl text-gray-600 hidden">
+            No records found matching your criteria.
+        </div>
+
+    </main>
+
+    <!-- Firebase Script & Logic -->
+    <script type="module" src="app.js"></script>
+
 </body>
 </html>
