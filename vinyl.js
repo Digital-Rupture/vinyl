@@ -1,447 +1,110 @@
-// VETERAN CLASS NOTE: This script is organized into three main sections:
-// 1. Setup & Utilities (Variables, Firebase, Helper Functions)
-// 2. Core Display Logic (Fetching Data and Rendering Cards)
-// 3. User Interaction (The Search Functionality)
-// This structure helps with maintainability and debugging!
-
-// =================================================================
-// 1. SETUP & UTILITIES
-// =================================================================
-
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { 
-    getAuth, 
-    signInAnonymously, 
-    signInWithCustomToken, 
-    onAuthStateChanged 
-} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { 
-    getFirestore, 
-    collection, 
-    query, 
-    onSnapshot, 
-    doc, 
-    setLogLevel,
-    addDoc 
-} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-
-// Global state variables
-let db;
-let auth;
-let userId = null;
-let allRecords = [];
-let isAuthReady = false;
-
-// New global state for filtering
-let currentFilters = {
-    format: '',
-    yearFrom: null,
-    yearTo: null,
-};
-
-
-// Configuration and Paths
-const COLLECTION_PATH = 'records'; 
-// DATA_PATH is correctly set to root folder location
-const DATA_PATH = 'initialcollection.json'; 
-
-// Firebase Configuration (MUST be provided by the environment)
-const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-
-// Helper: Custom Message Box (Replaces alert())
-/**
- * Shows a custom styled message box on the screen.
- * @param {HTMLElement} boxElement The message box DOM element.
- * @param {string} message The message text.
- * @param {'success'|'error'|'info'} type The type of message.
- */
-function showMessage(boxElement, message, type = 'info') {
-    // Clear existing classes and set base styles
-    boxElement.className = 'message-box fixed top-4 right-4 z-50 p-3 rounded-lg shadow-xl';
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vinyl Collection Archiver | Modern Turntable Theme</title>
+    <!-- Load Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script> 
     
-    // Set type-specific styling
-    switch (type) {
-        case 'success':
-            boxElement.classList.add('bg-green-500', 'text-white');
-            break;
-        case 'error':
-            boxElement.classList.add('bg-red-600', 'text-white');
-            break;
-        case 'info':
-        default:
-            boxElement.classList.add('bg-blue-500', 'text-white');
-            break;
-    }
+    <!-- LOAD CUSTOM STYLES from the external file, now correctly linked -->
+    <link rel="stylesheet" href="/assets/css/styles.css">
+</head>
+<body class="bg-gray-100 min-h-screen">
 
-    boxElement.textContent = message;
-    boxElement.style.display = 'block';
+    <!-- Message Box for notifications (Replaces alert()) -->
+    <div id="message-box" class="message-box fixed top-4 right-4 z-50 p-3 rounded-lg shadow-xl hidden"></div>
 
-    // Auto-hide after 5 seconds
-    setTimeout(() => {
-        boxElement.style.display = 'none';
-    }, 5000);
-}
-
-
-// Firebase Initialization and Authentication
-/**
- * Initializes Firebase, authenticates the user, and sets up the Firestore listener.
- * @param {HTMLElement} messageBox The message box element.
- * @param {HTMLElement} loadingIndicator The loading indicator element.
- */
-async function setupFirebase(messageBox, loadingIndicator) {
-    try {
-        setLogLevel('debug'); // Enable Firestore logging for debugging
-        const app = initializeApp(firebaseConfig);
-        db = getFirestore(app);
-        auth = getAuth(app);
-
-        // Authenticate the user
-        if (initialAuthToken) {
-            await signInWithCustomToken(auth, initialAuthToken);
-        } else {
-            // Sign in anonymously if no custom token is available (e.g., local testing)
-            await signInAnonymously(auth);
-        }
-
-        // Set up Auth State Listener
-        onAuthStateChanged(auth, (user) => {
-            if (user) {
-                userId = user.uid;
-                showMessage(messageBox, `Welcome back! User ID: ${userId}`, 'success');
-            } else {
-                // Should only happen on sign-out, which is not implemented, but good practice.
-                userId = null;
-                showMessage(messageBox, 'Signed out or failed to sign in.', 'error');
-            }
-            isAuthReady = true;
-            // Once auth is ready, fetch and listen to data
-            setupDataListener(messageBox, loadingIndicator);
-        });
-
-    } catch (error) {
-        showMessage(messageBox, `Firebase setup failed: ${error.message}`, 'error');
-        console.error("Firebase setup error:", error);
-        loadingIndicator.style.display = 'none';
-    }
-}
-
-
-// =================================================================
-// 2. CORE DISPLAY LOGIC
-// =================================================================
-
-/**
- * Fetches the initial static data from the JSON file.
- * @returns {Promise<Array<Object>>} A promise that resolves to an array of record objects.
- */
-async function fetchInitialData() {
-    try {
-        // Path updated to reflect location in the root folder
-        const response = await fetch(DATA_PATH);
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        return response.json();
-    } catch (e) {
-        console.error("Could not load initial data:", e);
-        // Return an empty array to allow the app to continue running
-        return []; 
-    }
-}
-
-/**
- * Sets up the real-time listener for the user's private collection in Firestore.
- * @param {HTMLElement} messageBox The message box element.
- * @param {HTMLElement} loadingIndicator The loading indicator element.
- */
-async function setupDataListener(messageBox, loadingIndicator) {
-    if (!db || !userId) {
-        // Wait for Firebase to be ready (which happens when isAuthReady is set)
-        return; 
-    }
-
-    try {
-        // Path: /artifacts/{appId}/users/{userId}/records
-        const recordsRef = collection(db, 'artifacts', appId, 'users', userId, COLLECTION_PATH);
-        const q = query(recordsRef);
-
-        // Initial fetch of static data
-        const staticRecords = await fetchInitialData();
-
-        // Listen for real-time updates from Firestore
-        onSnapshot(q, (snapshot) => {
-            const firestoreRecords = [];
-            snapshot.forEach((doc) => {
-                // Add the Firestore document ID to the record data
-                firestoreRecords.push({ id: doc.id, firestoreDocId: doc.id, ...doc.data() });
-            });
-
-            // Merge static and Firestore data. 
-            // NOTE: For simplicity, records from Firestore and static JSON are treated separately
-            // to avoid complex de-duplication logic in this example.
-            
-            // The final collection combines static and user-added records
-            const finalRecords = [...staticRecords, ...firestoreRecords];
-
-            allRecords = finalRecords;
-            console.log(`Total records loaded (Static + Firestore): ${allRecords.length}`);
-            
-            // Immediately render the full, unfiltered collection
-            renderRecords(allRecords); 
-            loadingIndicator.style.display = 'none';
-        }, (error) => {
-            showMessage(messageBox, `Error loading collection data: ${error.message}`, 'error');
-            console.error("Firestore listen error:", error);
-            loadingIndicator.style.display = 'none';
-        });
-
-    } catch (e) {
-        showMessage(messageBox, `Error setting up collection listener: ${e.message}`, 'error');
-        console.error("Listener setup error:", e);
-        loadingIndicator.style.display = 'none';
-    }
-}
-
-
-/**
- * Creates the HTML string for a single album card.
- * @param {Object} record The record object.
- * @returns {string} The HTML string for the card.
- */
-function createAlbumCard(record) {
-    const defaultCover = `https://placehold.co/300x300/1A1A1A/E0E0E0?text=${record.artist}+${record.title.split(' ')[0]}`;
-
-    // Calculate average value for visual indicator
-    const avgValue = (record.estimated_value_low + record.estimated_value_high) / 2;
-    let valueColorClass = 'bg-gray-700'; // Default dark color
-    if (avgValue > 40) {
-        valueColorClass = 'bg-red-600'; // High value
-    } else if (avgValue > 20) {
-        valueColorClass = 'bg-yellow-600'; // Mid value
-    } else if (avgValue > 0) {
-        valueColorClass = 'bg-green-600'; // Low value
-    }
-
-    const valueRange = `$${record.estimated_value_low.toFixed(2)} - $${record.estimated_value_high.toFixed(2)}`;
-
-    return `
-        <div class="album-card group" data-id="${record.id}">
-            <div class="h-48 sm:h-64 md:h-56 overflow-hidden relative">
-                <!-- Placeholder Image -->
-                <img src="${defaultCover}" 
-                     alt="Cover art for ${record.title}" 
-                     class="w-full h-full object-cover transition duration-300 group-hover:opacity-80">
-                
-                <!-- Value Indicator Badge -->
-                <div class="absolute top-2 right-2 ${valueColorClass} text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg">
-                    ${valueRange}
-                </div>
-            </div>
-            <div class="p-4">
-                <h3 class="text-lg font-heading font-semibold text-color-text-primary truncate" title="${record.title}">
-                    ${record.title}
-                </h3>
-                <p class="text-sm text-color-text-secondary truncate mt-1">
-                    ${record.artist}
-                </p>
-                <div class="text-xs text-color-text-secondary mt-2 flex justify-between">
-                    <span>${record.original_release_year}</span>
-                    <span class="font-mono text-color-accent-teal">${record.catalog_no || 'N/A'}</span>
-                </div>
+    <!-- Header / Navbar -->
+    <header class="bg-gray-900 text-white shadow-lg sticky top-0 z-10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col md:flex-row justify-between items-center">
+            <h1 class="text-3xl font-extrabold tracking-tight mb-2 md:mb-0">
+                <span class="text-yellow-400">Vinyl</span> Archiver
+            </h1>
+            <div class="flex items-center space-x-4 w-full md:w-auto">
+                <input type="text" id="search-input" placeholder="Search by Artist or Title..." 
+                       class="text-gray-900 p-2 rounded-lg shadow-inner w-full md:w-64 focus:ring-yellow-500 focus:border-yellow-500 transition duration-150">
+                <button id="filter-btn" class="bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-bold py-2 px-4 rounded-lg shadow-md transition duration-150 transform hover:scale-105">
+                    Filter
+                </button>
             </div>
         </div>
-    `;
-}
+    </header>
 
-/**
- * Renders the array of records to the DOM.
- * @param {Array<Object>} records The array of record objects to render.
- */
-function renderRecords(records) {
-    const grid = document.getElementById('collection-grid');
-    const emptyState = document.getElementById('empty-state');
-    
-    // Check if there are records to display
-    if (records.length === 0) {
-        grid.innerHTML = '';
-        emptyState.style.display = 'block';
-        return;
-    }
-    
-    emptyState.style.display = 'none';
+    <!-- Main Content Area -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Collection Display Area -->
+        <div id="collection-grid" class="mt-8 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+            <!-- Album cards will be rendered here by JavaScript -->
+        </div>
 
-    // Generate all card HTML strings and join them
-    const cardsHtml = records.map(createAlbumCard).join('');
-    grid.innerHTML = cardsHtml;
-}
+        <!-- Loading Indicator -->
+        <div id="loading-indicator" class="text-center mt-12 text-gray-700 text-xl hidden">Loading your collection...</div>
 
+        <!-- Empty State Message -->
+        <div id="empty-state" class="text-center mt-12 p-8 border-2 border-dashed border-gray-400 rounded-lg hidden">
+            <h3 class="text-2xl font-semibold text-gray-600">No Records Found</h3>
+            <p class="text-gray-500 mt-2">Try adjusting your search or filter criteria.</p>
+        </div>
+    </main>
 
-// =================================================================
-// 3. USER INTERACTION (Search & Filter)
-// =================================================================
+    <!-- Filter Modal (Hidden by Default) -->
+    <div id="filter-modal" class="fixed inset-0 bg-black bg-opacity-75 z-50 flex justify-center items-center hidden">
+        <div class="bg-white rounded-xl shadow-2xl p-6 w-11/12 max-w-md transform transition-all scale-100 md:scale-95">
+            
+            <!-- Modal Header -->
+            <div class="flex justify-between items-center pb-4 border-b border-gray-200">
+                <h2 class="text-2xl font-bold text-gray-800">Advanced Filters</h2>
+                <button id="close-modal-button" class="text-gray-500 hover:text-gray-700 text-3xl leading-none">&times;</button>
+            </div>
 
-/**
- * Applies the current search and filter criteria to the global list of records.
- */
-function applySearchAndFilter() {
-    const searchInput = document.getElementById('search-input');
-    const query = searchInput.value.toLowerCase();
+            <!-- Modal Body: Filter Options -->
+            <div class="mt-4 space-y-4 text-gray-800">
 
-    // 1. Filter based on current filters (Year/Format)
-    let filteredRecords = allRecords.filter(record => {
-        const year = parseInt(record.original_release_year);
-        
-        // Year filtering
-        const yearMatch = (!currentFilters.yearFrom || year >= currentFilters.yearFrom) &&
-                          (!currentFilters.yearTo || year <= currentFilters.yearTo);
+                <!-- Format Filter (Placeholder for future feature) -->
+                <div>
+                    <label for="filter-format" class="block text-sm font-medium text-gray-700 mb-2">Format (e.g., LP, 7", CD)</label>
+                    <select id="filter-format" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-yellow-500 focus:border-yellow-500">
+                        <option value="">All Formats (Placeholder)</option>
+                        <option value="LP">LP (12")</option>
+                        <option value="7">Single (7")</option>
+                        <option value="CD">CD</option>
+                    </select>
+                </div>
 
-        // Format filtering (currently a placeholder for this example)
-        const formatMatch = !currentFilters.format || record.format === currentFilters.format; 
+                <!-- Release Year Filter -->
+                <div class="flex space-x-4">
+                    <div class="flex-1">
+                        <label for="filter-year-from" class="block text-sm font-medium text-gray-700 mb-2">Year From</label>
+                        <input type="number" id="filter-year-from" placeholder="e.g., 1970" 
+                               class="w-full p-2 border border-gray-300 rounded-lg focus:ring-yellow-500 focus:border-yellow-500">
+                    </div>
+                    <div class="flex-1">
+                        <label for="filter-year-to" class="block text-sm font-medium text-gray-700 mb-2">Year To</label>
+                        <input type="number" id="filter-year-to" placeholder="e.g., 1985" 
+                               class="w-full p-2 border border-gray-300 rounded-lg focus:ring-yellow-500 focus:border-yellow-500">
+                    </div>
+                </div>
 
-        return yearMatch && formatMatch;
-    });
+                <!-- Reset Button -->
+                <div>
+                    <button id="reset-filter-button" class="w-full bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg shadow-md transition duration-150 transform hover:scale-[1.01]">
+                        Reset Filters
+                    </button>
+                </div>
+            </div>
 
-    // 2. Filter based on search query (Artist/Title)
-    const finalRecords = filteredRecords.filter(record => {
-        return record.artist.toLowerCase().includes(query) || 
-               record.title.toLowerCase().includes(query);
-    });
-
-    // 3. Render the results
-    renderRecords(finalRecords);
-}
-
-
-/**
- * Handles the logic for the Filter Modal and its buttons.
- * @param {HTMLElement} filterModal The filter modal DOM element.
- * @param {HTMLElement} filterBtn The button that opens the modal.
- * @param {HTMLElement} closeModalButton The button that closes the modal.
- * @param {HTMLElement} resetFilterButton The button that resets the form.
- * @param {HTMLElement} applyFilterButton The button that applies the filters.
- */
-function setupFilterModal(filterModal, filterBtn, closeModalButton, resetFilterButton, applyFilterButton) {
-    const yearFromInput = document.getElementById('filter-year-from');
-    const yearToInput = document.getElementById('filter-year-to');
-    const formatSelect = document.getElementById('filter-format');
-
-    // Open the modal
-    filterBtn.addEventListener('click', () => {
-        filterModal.classList.remove('hidden');
-        // Ensure form reflects current state when opening
-        yearFromInput.value = currentFilters.yearFrom || '';
-        yearToInput.value = currentFilters.yearTo || '';
-        formatSelect.value = currentFilters.format || '';
-    });
-
-    // Close the modal
-    closeModalButton.addEventListener('click', () => {
-        filterModal.classList.add('hidden');
-    });
-
-    // Reset filters
-    resetFilterButton.addEventListener('click', () => {
-        yearFromInput.value = '';
-        yearToInput.value = '';
-        formatSelect.value = '';
-        currentFilters = { format: '', yearFrom: null, yearTo: null };
-        filterModal.classList.add('hidden');
-        applySearchAndFilter(); // Apply reset immediately
-    });
-
-    // Apply filters
-    applyFilterButton.addEventListener('click', () => {
-        const from = parseInt(yearFromInput.value);
-        const to = parseInt(yearToInput.value);
-        
-        currentFilters.yearFrom = (isNaN(from) || from < 0) ? null : from;
-        currentFilters.yearTo = (isNaN(to) || to < 0) ? null : to;
-        currentFilters.format = formatSelect.value;
-        
-        filterModal.classList.add('hidden');
-        applySearchAndFilter();
-    });
-}
+            <!-- Apply Button -->
+            <div class="mt-6">
+                <button id="apply-filter-button" class="w-full bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-bold py-3 px-4 rounded-lg shadow-md transition duration-150 transform hover:scale-105">
+                    Apply Filters
+                </button>
+            </div>
+        </div>
+    </div>
 
 
-// =================================================================
-// 4. INITIALIZATION
-// =================================================================
-
-/**
- * Main application initializer.
- */
-async function initApp() {
-    const messageBox = document.getElementById('message-box');
-    const loadingIndicator = document.getElementById('loading-indicator');
-    const searchInput = document.getElementById('search-input');
-    const filterModal = document.getElementById('filter-modal');
-    const filterBtn = document.getElementById('filter-btn');
-    const closeModalButton = document.getElementById('close-modal-button');
-    const resetFilterButton = document.getElementById('reset-filter-button');
-    const applyFilterButton = document.getElementById('apply-filter-button');
-
-    // Show loading indicator before fetching data
-    loadingIndicator.style.display = 'block';
-
-    try {
-        // 1. Setup Firebase and Authentication, which then triggers the Firestore listener
-        await setupFirebase(messageBox, loadingIndicator);
-
-        // 2. Setup event listeners
-        
-        // Search listener (debounce for performance)
-        let searchTimeout;
-        searchInput.addEventListener('input', () => {
-            clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(applySearchAndFilter, 300);
-        });
-
-        // Filter modal setup
-        setupFilterModal(
-            filterModal, 
-            filterBtn, 
-            closeModalButton, 
-            resetFilterButton, 
-            applyFilterButton
-        );
-
-
-    } catch (error) {
-        showMessage(messageBox, `Failed to initialize application: ${error.message}`, 'error');
-        loadingIndicator.style.display = 'none';
-    }
-}
-
-// Start the application when the window loads
-window.onload = initApp;
-
-// =================================================================
-// 5. SAMPLE FUNCTION TO SAVE DATA (For Future Upload Feature)
-// This function demonstrates how data would be saved to Firestore.
-// =================================================================
-
-/**
- * Saves a new record to the user's private collection in Firestore.
- * @param {Object} record The record object to save.
- * @param {HTMLElement} messageBox The message box element.
- */
-async function saveRecord(record, messageBox) {
-    if (!db || !userId) {
-        showMessage(messageBox, 'Database not ready or user not signed in.', 'error');
-        return;
-    }
-    try {
-        // Path: /artifacts/{appId}/users/{userId}/records
-        const recordsRef = collection(db, 'artifacts', appId, 'users', userId, COLLECTION_PATH);
-        await addDoc(recordsRef, record);
-        showMessage(messageBox, 'Record successfully saved to Firestore!', 'success');
-    } catch (e) {
-        showMessage(messageBox, `Error adding document: ${e.message}`, 'error');
-        console.error("Error adding document: ", e);
-    }
-}
+    <!-- Script link confirmed to be in the root directory -->
+    <script type="module" src="./vinyl.js"></script> 
+</body>
+</html>
