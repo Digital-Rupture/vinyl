@@ -2,29 +2,17 @@
 // 1. Setup & Utilities (Variables, Firebase, Helper Functions)
 // 2. Core Display Logic (Fetching Data and Rendering Cards)
 // 3. User Interaction (The Search/Filter Functionality)
-// The primary fix in this version is the highly resilient, isolated checking 
-// for every single DOM element before attaching an event listener.
+// FIX: Imports have been refactored to use 'import * as Name' for robustness,
+// which should resolve the 'onAuthStateChanged is undefined' error.
 
 // =================================================================
 // 1. SETUP & UTILITIES
 // =================================================================
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { 
-    getAuth, 
-    signInAnonymously, 
-    signInWithCustomToken, 
-    onAuthStateChanged 
-} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { 
-    getFirestore, 
-    collection, 
-    query, 
-    onSnapshot, 
-    doc, 
-    setLogLevel,
-    addDoc 
-} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+// Replaced destructive imports with module imports for resilience
+import * as FirebaseAuth from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import * as FirebaseFirestore from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 
 // Global state variables
@@ -51,7 +39,7 @@ const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__f
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
 // Set Firebase logging level (Useful for debugging)
-setLogLevel('debug');
+FirebaseFirestore.setLogLevel('debug');
 
 
 /**
@@ -224,6 +212,7 @@ function createRecordCard(record) {
     const highValue = record.estimated_value_high || 0;
 
     if (highValue >= 40) {
+        // Using variables defined in styles.css
         valueClass = 'bg-[var(--color-value-high)]'; // Red
     } else if (highValue >= 25) {
         valueClass = 'bg-[var(--color-value-mid)]'; // Amber
@@ -289,19 +278,23 @@ function renderRecords(records, container) {
 async function initFirebase() {
     try {
         const app = initializeApp(firebaseConfig);
-        db = getFirestore(app);
-        auth = getAuth(app);
+        // FIX: Accessing getFirestore and getAuth via module exports
+        db = FirebaseFirestore.getFirestore(app);
+        auth = FirebaseAuth.getAuth(app);
         
         // Use custom token if provided, otherwise sign in anonymously
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
         if (initialAuthToken) {
-            await signInWithCustomToken(auth, initialAuthToken);
+            // FIX: Accessing signInWithCustomToken via module export
+            await FirebaseAuth.signInWithCustomToken(auth, initialAuthToken);
         } else {
-            await signInAnonymously(auth);
+            // FIX: Accessing signInAnonymously via module export
+            await FirebaseAuth.signInAnonymously(auth);
         }
         
         // Set up Auth State listener to capture the user ID
-        onAuthStateChanged(auth, (user) => {
+        // FIX: Accessing onAuthStateChanged via module export
+        FirebaseAuth.onAuthStateChanged(auth, (user) => {
             if (user) {
                 userId = user.uid;
             } else {
@@ -347,11 +340,14 @@ async function startDataListener(recordsContainer, messageBox) {
         }
 
         // Path: /artifacts/{appId}/users/{userId}/records
-        const recordsRef = collection(db, 'artifacts', appId, 'users', userId, COLLECTION_PATH);
-        const q = query(recordsRef);
+        // FIX: Accessing collection via module export
+        const recordsRef = FirebaseFirestore.collection(db, 'artifacts', appId, 'users', userId, COLLECTION_PATH);
+        // FIX: Accessing query via module export
+        const q = FirebaseFirestore.query(recordsRef);
 
         // onSnapshot listens to real-time changes
-        onSnapshot(q, (snapshot) => {
+        // FIX: Accessing onSnapshot via module export
+        FirebaseFirestore.onSnapshot(q, (snapshot) => {
             let firestoreRecords = [];
             snapshot.forEach((doc) => {
                 firestoreRecords.push({ id: doc.id, ...doc.data() });
@@ -391,13 +387,10 @@ async function startDataListener(recordsContainer, messageBox) {
     if (isAuthReady) {
         loadFirestoreData();
     } else {
-        // If not ready, we rely on the onAuthStateChanged listener to set isAuthReady
-        // and let the data flow start from there. We'll wait until the auth state is confirmed.
-        // For the first load, we need to ensure the listener is registered.
-        
         // This part is crucial: we attach a temporary listener just to make sure 
         // the initial data load is correctly synchronized with authentication.
-        const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+        // FIX: Accessing onAuthStateChanged via module export
+        const unsubscribeAuth = FirebaseAuth.onAuthStateChanged(auth, (user) => {
             loadFirestoreData();
             unsubscribeAuth(); // Stop listening after the first successful data load
         });
@@ -555,6 +548,7 @@ async function initApp() {
 
 
         // Listeners for dynamic filter inputs (Individual checks)
+        // NOTE: The IDs used here must match index.html: filter-format-select, filter-year-from, filter-year-to
         if (filterFormatSelect) {
              filterFormatSelect.addEventListener('change', (e) => updateFilterState('format', e.target.value));
         } else {
@@ -594,7 +588,6 @@ window.onload = initApp;
 
 // =================================================================
 // 5. SAMPLE FUNCTION TO SAVE DATA (For Future Upload Feature)
-// This function demonstrates how data would be saved to Firestore.
 // =================================================================
 
 /**
@@ -609,8 +602,9 @@ async function saveRecord(record, messageBox) {
     }
     try {
         // Path: /artifacts/{appId}/users/{userId}/records
-        const recordsRef = collection(db, 'artifacts', appId, 'users', userId, COLLECTION_PATH);
-        await addDoc(recordsRef, record);
+        // FIX: Accessing collection and addDoc via module exports
+        const recordsRef = FirebaseFirestore.collection(db, 'artifacts', appId, 'users', userId, COLLECTION_PATH);
+        await FirebaseFirestore.addDoc(recordsRef, record);
         showMessage(messageBox, 'Record successfully saved to Firestore!', 'success');
     } catch (e) {
         showMessage(messageBox, `Error adding document: ${e.message}`, 'error');
