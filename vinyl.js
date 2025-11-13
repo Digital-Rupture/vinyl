@@ -3,14 +3,15 @@
 // 2. Core Display Logic (Fetching Data and Rendering Cards)
 // 3. User Interaction (The Search/Filter Functionality)
 // FIX: Imports have been refactored to use 'import * as Name' for robustness,
-// which should resolve the 'onAuthStateChanged is undefined' error.
+// which resolves the 'onAuthStateChanged is undefined' error.
 
 // =================================================================
 // 1. SETUP & UTILITIES
 // =================================================================
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-// Replaced destructive imports with module imports for resilience
+
+// FIX: Importing entire modules for better stability with CDN usage
 import * as FirebaseAuth from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import * as FirebaseFirestore from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
@@ -39,6 +40,7 @@ const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__f
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
 // Set Firebase logging level (Useful for debugging)
+// FIX: Accessing setLogLevel via module export
 FirebaseFirestore.setLogLevel('debug');
 
 
@@ -278,9 +280,10 @@ function renderRecords(records, container) {
 async function initFirebase() {
     try {
         const app = initializeApp(firebaseConfig);
+        
         // FIX: Accessing getFirestore and getAuth via module exports
-        db = FirebaseFirestore.getFirestore(app);
         auth = FirebaseAuth.getAuth(app);
+        db = FirebaseFirestore.getFirestore(app);
         
         // Use custom token if provided, otherwise sign in anonymously
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
@@ -298,11 +301,12 @@ async function initFirebase() {
             if (user) {
                 userId = user.uid;
             } else {
-                userId = crypto.randomUUID(); // Fallback ID for non-authenticated states
+                // If authentication fails, use a fallback random ID (though this should be rare)
+                userId = crypto.randomUUID(); 
             }
             isAuthReady = true;
 
-            // Update the user ID display element
+            // Update the user ID display element (if it exists)
             const userIdDisplay = document.getElementById('user-id-display');
             if (userIdDisplay) {
                 userIdDisplay.textContent = userId;
@@ -329,10 +333,11 @@ async function startDataListener(recordsContainer, messageBox) {
     // 1. Load initial data from JSON
     const initialCollection = await fetchInitialCollection();
 
-    // 2. Load Firestore data once auth is ready
+    // The logic to load Firestore data is now wrapped in a function to be called 
+    // only when we are sure the Auth state has been set (i.e., isAuthReady is true).
     const loadFirestoreData = () => {
         // We now check for auth readiness here, ensuring we have a userId before querying Firestore
-        if (!db || !isAuthReady) {
+        if (!db || !isAuthReady || !userId) {
             // If Firebase or auth failed/not ready, just use the initial collection
             allRecords = initialCollection;
             renderRecords(allRecords, recordsContainer);
@@ -381,20 +386,13 @@ async function startDataListener(recordsContainer, messageBox) {
         });
     };
 
-    // The onAuthStateChanged listener in initFirebase() triggers this logic
-    // when the state is known. We ensure loadFirestoreData runs once the state is set.
-    // If auth is already ready (which happens quickly), we run it immediately.
-    if (isAuthReady) {
+    // This block ensures the data listener starts only AFTER auth state is confirmed
+    // FIX: Accessing onAuthStateChanged via module export
+    const unsubscribeAuth = FirebaseAuth.onAuthStateChanged(auth, (user) => {
+        // We can check if isAuthReady is true here, but the listener itself confirms the state is known.
         loadFirestoreData();
-    } else {
-        // This part is crucial: we attach a temporary listener just to make sure 
-        // the initial data load is correctly synchronized with authentication.
-        // FIX: Accessing onAuthStateChanged via module export
-        const unsubscribeAuth = FirebaseAuth.onAuthStateChanged(auth, (user) => {
-            loadFirestoreData();
-            unsubscribeAuth(); // Stop listening after the first successful data load
-        });
-    }
+        unsubscribeAuth(); // Stop listening after the first successful data load
+    });
 }
 
 /**
@@ -412,7 +410,11 @@ function applyFilter(filterModal, recordsContainer, messageBox, applyFilterButto
     const filterYearFrom = document.getElementById('filter-year-from');
     const filterYearTo = document.getElementById('filter-year-to');
 
-    if (filterFormatSelect) updateFilterState('format', filterFormatSelect.value);
+    // NOTE: index.html has IDs: filter-format, filter-year-from, filter-year-to
+    // FIXING THE MISMATCH HERE:
+    const formatSelect = document.getElementById('filter-format'); 
+    
+    if (formatSelect) updateFilterState('format', formatSelect.value);
     if (filterYearFrom) updateFilterState('yearFrom', parseInt(filterYearFrom.value) || null);
     if (filterYearTo) updateFilterState('yearTo', parseInt(filterYearTo.value) || null);
     
@@ -440,11 +442,12 @@ function resetFilters(filterModal, recordsContainer, messageBox, applyFilterButt
     currentFilters = { format: '', yearFrom: null, yearTo: null };
 
     // Reset DOM inputs
-    const filterFormatSelect = document.getElementById('filter-format-select');
+    // NOTE: index.html has ID: filter-format
+    const formatSelect = document.getElementById('filter-format'); 
     const filterYearFrom = document.getElementById('filter-year-from');
     const filterYearTo = document.getElementById('filter-year-to');
     
-    if (filterFormatSelect) filterFormatSelect.value = '';
+    if (formatSelect) formatSelect.value = '';
     if (filterYearFrom) filterYearFrom.value = '';
     if (filterYearTo) filterYearTo.value = '';
 
@@ -478,18 +481,19 @@ async function initApp() {
 
     try {
         // 1. Show loading indicator
-        loadingIndicator.style.display = 'flex';
+        loadingIndicator.style.display = 'block';
 
         // 2. Get necessary DOM elements
         const searchInput = document.getElementById('search-input');
         const filterBtn = document.getElementById('filter-btn');
-        const recordsContainer = document.getElementById('records-container');
+        // NOTE: The index.html container ID is 'collection-container'
+        const recordsContainer = document.getElementById('collection-container'); 
         const filterModal = document.getElementById('filter-modal');
         const closeModalButton = document.getElementById('close-modal-button');
         const applyFilterButton = document.getElementById('apply-filter-button');
         const resetFilterButton = document.getElementById('reset-filter-button');
         
-        const filterFormatSelect = document.getElementById('filter-format-select');
+        // Input elements in modal (used for event listeners, but actual value fetching is in applyFilter)
         const filterYearFrom = document.getElementById('filter-year-from');
         const filterYearTo = document.getElementById('filter-year-to');
 
@@ -498,6 +502,7 @@ async function initApp() {
         await initFirebase();
 
         // 4. Start listening to the data (this handles initial data load and real-time updates)
+        // This MUST be called after initFirebase()
         await startDataListener(recordsContainer, messageBox);
 
         // 5. Set up Event Listeners (Isolated Checks for Resilience)
@@ -516,12 +521,12 @@ async function initApp() {
              console.warn(`[DOM Check Fail] Filter button opening disabled. filterBtn exists: ${!!filterBtn}, filterModal exists: ${!!filterModal}`);
         }
 
-        // --- Modal/Filter Listeners (MUST check for existence before attaching) ---
+        // --- Modal/Filter Listeners ---
 
         if (closeModalButton && filterModal) {
             closeModalButton.addEventListener('click', () => toggleModal(filterModal));
         } else {
-             console.warn(`[DOM Check Fail] Close Modal Button functionality disabled. closeModalButton exists: ${!!closeModalButton}`);
+             console.warn(`[DOM Check Fail] Close Modal Button functionality disabled.`);
         }
 
         if (filterModal) {
@@ -537,36 +542,21 @@ async function initApp() {
         if (applyFilterButton && filterModal && recordsContainer && messageBox) {
             applyFilterButton.addEventListener('click', () => applyFilter(filterModal, recordsContainer, messageBox, applyFilterButton));
         } else {
-             console.warn(`[DOM Check Fail] Apply Filter Button functionality disabled. applyFilterButton exists: ${!!applyFilterButton}`);
+             console.warn(`[DOM Check Fail] Apply Filter Button functionality disabled.`);
         }
 
         if (resetFilterButton && filterModal && recordsContainer && messageBox) {
             resetFilterButton.addEventListener('click', () => resetFilters(filterModal, recordsContainer, messageBox, applyFilterButton));
         } else {
-             console.warn(`[DOM Check Fail] Reset Filter Button functionality disabled. resetFilterButton exists: ${!!resetFilterButton}`);
+             console.warn(`[DOM Check Fail] Reset Filter Button functionality disabled.`);
         }
 
 
         // Listeners for dynamic filter inputs (Individual checks)
-        // NOTE: The IDs used here must match index.html: filter-format-select, filter-year-from, filter-year-to
-        if (filterFormatSelect) {
-             filterFormatSelect.addEventListener('change', (e) => updateFilterState('format', e.target.value));
-        } else {
-             console.warn(`[DOM Check Fail] Filter Format Select functionality disabled. filterFormatSelect exists: ${!!filterFormatSelect}`);
-        }
+        // NOTE: Input listeners are removed from format/year inputs as values are read directly 
+        // in applyFilter/resetFilters to avoid complex state synchronization, simplifying the code. 
+        // We only need the listeners for search and modal buttons.
 
-        if (filterYearFrom) {
-            filterYearFrom.addEventListener('input', (e) => updateFilterState('yearFrom', parseInt(e.target.value) || null));
-        } else {
-             console.warn(`[DOM Check Fail] Filter Year From functionality disabled. filterYearFrom exists: ${!!filterYearFrom}`);
-        }
-
-        if (filterYearTo) {
-            filterYearTo.addEventListener('input', (e) => updateFilterState('yearTo', parseInt(e.target.value) || null));
-        } else {
-             console.warn(`[DOM Check Fail] Filter Year To functionality disabled. filterYearTo exists: ${!!filterYearTo}`);
-        }
-        
         // 6. Hide loading indicator after successful init
         loadingIndicator.style.display = 'none';
         showMessage(messageBox, "Vinyl Archiver Initialized. Ready to rock!", 'success');
