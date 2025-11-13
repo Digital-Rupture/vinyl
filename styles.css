@@ -19,60 +19,27 @@
     --font-size-base: 16px;
 }
 /* Import Google Fonts - Poppins for headings, DM Sans for body */
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700&family=Poppins:wght@600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@600&family=DM+Sans:wght@400;500;700&display=swap');
 
-* {
-    /* Basic CSS Reset */
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
 
+/* Apply global styles and variables from Tailwind */
 body {
-    /* Apply global theme variables */
     background-color: var(--color-background);
-    color: var(--color-text-primary);
-    font-family: var(--font-body);
-    font-size: var(--font-size-base);
-    line-height: 1.6;
-    min-height: 100vh; /* Ensures the background covers the entire viewport */
-    padding: 2rem;
 }
 
-h1, h2, h3 {
-    font-family: var(--font-heading);
-    color: var(--color-accent-copper);
-    letter-spacing: 0.05em; /* A subtle spread for a modern look */
-    margin-bottom: 0.5em;
+/* --- MESSAGE BOX --- */
+
+.message-box {
+    /* Base classes from Tailwind applied in JS: fixed top-4 right-4 z-50 p-3 rounded-lg shadow-xl */
+    font-weight: 600;
+    transition: all 0.3s ease-in-out;
 }
 
-/* Ensure images scale correctly within their containers */
-img {
-    max-width: 100%;
-    height: auto;
-    display: block;
-}
-/* --- APP LAYOUT --- */
 
-/* Main application container for centering and max-width */
-#app-container {
-    max-width: 1400px;
-    margin: 0 auto;
-}
+/* --- ALBUM CARD STYLES --- */
 
-/* The Grid View for the Albums - critical for the "Modern Turntable" look */
-.album-grid {
-    display: grid;
-    /* Responsive Grid: 
-       - auto-fit ensures it fills the container.
-       - minmax ensures cards are at least 250px wide, up to 1 fraction of the space. */
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 30px; /* Space between the cards */
-    padding-top: 2rem;
-}
-
-/* Styling for an individual album card (where the cover will go) */
 .album-card {
+    /* Inherit dark theme from background and surface variables */
     background-color: var(--color-surface);
     border-radius: 8px;
     overflow: hidden;
@@ -87,50 +54,63 @@ img {
     transform: translateY(-5px);
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.6);
 }
-/* --- HEADER AND CONTROLS --- */
 
-header {
-    padding: 1rem 0;
-    border-bottom: 1px solid var(--color-surface); /* Subtle separator */
+/* Ensure image takes up space nicely */
+.album-card img {
+    aspect-ratio: 1 / 1; /* Forces a square aspect ratio for album art */
 }
 
-#controls {
-    display: flex;
-    gap: 15px;
-    margin-top: 1.5rem;
+/* --- TEXT COLORS --- */
+.album-title {
+    color: var(--color-accent-copper); /* Copper/gold color for main title */
+}
+.album-artist {
+    color: var(--color-text-secondary); /* Muted gray for secondary details */
 }
 
-#search-input, #filter-btn {
-    padding: 10px 15px;
-    border: 1px solid var(--color-text-secondary);
-    border-radius: 4px;
-    font-size: var(--font-size-base);
-    transition: all 0.2s ease;
+/* --- VALUE INDICATORS (If implemented in the future) --- */
+.value-high {
+    border-left: 5px solid var(--color-value-high);
+}
+.value-mid {
+    border-left: 5px solid var(--color-value-mid);
+}
+.value-low {
+    border-left: 5px solid var(--color-value-low);
 }
 
+/* --- FILTER MODAL CUSTOMIZATION (For visibility) --- */
+/* The modal uses Tailwind but we ensure it contrasts well */
+#filter-modal > div {
+    /* Override Tailwind bg-white for a better dark-mode feel if needed, but keeping white for contrast here */
+    background-color: #f7f7f7;
+}
+
+/* Style for search and filter inputs to match the dark header */
 #search-input {
-    flex-grow: 1; /* Allows the search bar to take up most of the space */
-    background-color: var(--color-surface);
-    color: var(--color-text-primary);
+    background-color: #333; 
+    border-color: #555;
+    color: #fff;
 }
-
 #search-input::placeholder {
-    color: var(--color-text-secondary);
-}
-
-#search-input:focus {
-    outline: none;
-    border-color: var(--color-accent-teal); /* Highlight on focus */
+    color: #999;
 }
 
 #filter-btn {
-    background-color: var(--color-accent-copper);
-    color: var(--color-background); /* Dark text on copper background */
-    cursor: pointer;
-    font-weight: bold;
-    border: none;
+    background-color: #333;
+    border-color: #555;
+}
+#filter-btn:hover {
+    background-color: #444;
 }
 
-#filter-btn:hover {
-    background-color: var(--color-accent-teal); /* Interactive hover */
+/* Custom button style for the seed button (optional: make it stand out) */
+#seed-collection-btn {
+    background-color: #B87333; /* Use the copper accent color */
+    color: #1A1A1A;
+    font-weight: 700;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+#seed-collection-btn:hover {
+    background-color: #D48844;
 }
