@@ -1,8 +1,9 @@
 // VETERAN CLASS NOTE: This script is organized into three main sections:
 // 1. Setup & Utilities (Variables, Firebase, Helper Functions)
 // 2. Core Display Logic (Fetching Data and Rendering Cards)
-// 3. User Interaction (The Search Functionality)
-// This structure helps with maintainability and debugging!
+// 3. User Interaction (The Search/Filter Functionality)
+// The primary fix in this version is the highly resilient, isolated checking 
+// for every single DOM element before attaching an event listener.
 
 // =================================================================
 // 1. SETUP & UTILITIES
@@ -43,7 +44,6 @@ let currentFilters = {
 
 // Configuration and Paths
 const COLLECTION_PATH = 'records'; 
-// NOTE: We now fetch initial data from the uploaded JSON file path
 const DATA_PATH = '/assets/json/initialcollection.json'; 
 
 // Firebase Configuration (MUST be provided by the environment)
@@ -138,7 +138,8 @@ function filterRecords(records) {
 
         // 1. Format Filter
         if (currentFilters.format) {
-            matchesFormat = record.format === currentFilters.format;
+            // Check if record has a format property and it matches
+            matchesFormat = record.format && record.format === currentFilters.format;
         }
 
         // 2. Year Filter
@@ -173,8 +174,8 @@ function handleSearch(searchTerm, recordsContainer, applyFilters = true) {
     
     // Apply text search on the filtered list
     const searchResults = filteredList.filter(record => 
-        record.artist.toLowerCase().includes(term) || 
-        record.title.toLowerCase().includes(term)
+        (record.artist && record.artist.toLowerCase().includes(term)) || 
+        (record.title && record.title.toLowerCase().includes(term))
     );
 
     renderRecords(searchResults, recordsContainer);
@@ -191,7 +192,6 @@ function updateFilterState(key, value) {
         ...currentFilters,
         [key]: value
     };
-    // The actual filtering happens when the 'Apply Filters' button is clicked
 }
 
 
@@ -208,33 +208,52 @@ function createRecordCard(record) {
     // Determine the cover image URL (placeholder is used)
     const imageWidth = 200;
     const imageHeight = 200;
-    const placeholderColor = record.id % 2 === 0 ? '00ADB5' : 'B87333';
-    const imageUrl = `https://placehold.co/${imageWidth}x${imageHeight}/${placeholderColor}/E0E0E0?text=${record.artist[0] + record.title[0]}`;
+    // Ensure ID is a number for consistent color calculation
+    const recordId = parseInt(record.id, 10) || 0; 
+    const placeholderColor = recordId % 2 === 0 ? '00ADB5' : 'B87333';
+    
+    // Safely get initials for placeholder text
+    const artistInitial = record.artist ? record.artist[0] : 'A';
+    const titleInitial = record.title ? record.title[0] : 'T';
+    const placeholderText = artistInitial + titleInitial;
+
+    const imageUrl = `https://placehold.co/${imageWidth}x${imageHeight}/${placeholderColor}/E0E0E0?text=${placeholderText}`;
     
     // Determine value class (for visual cue)
     let valueClass = 'bg-gray-400';
-    if (record.estimated_value_high >= 40) {
+    const highValue = record.estimated_value_high || 0;
+
+    if (highValue >= 40) {
         valueClass = 'bg-[var(--color-value-high)]'; // Red
-    } else if (record.estimated_value_high >= 25) {
+    } else if (highValue >= 25) {
         valueClass = 'bg-[var(--color-value-mid)]'; // Amber
     } else {
         valueClass = 'bg-[var(--color-value-low)]'; // Green
     }
+    
+    // Safely display values, defaulting to 0.00 if missing
+    const lowValue = (record.estimated_value_low || 0).toFixed(2);
+    const estHighValue = (record.estimated_value_high || 0).toFixed(2);
+    const title = record.title || 'Unknown Title';
+    const artist = record.artist || 'Unknown Artist';
+    const year = record.original_release_year || 'N/A';
+    const label = record.label || 'Unknown Label';
+
 
     return `
         <div class="album-card group shadow-lg">
             <div class="relative">
-                <img src="${imageUrl}" alt="${record.artist} - ${record.title}" class="w-full h-auto object-cover rounded-t-lg">
+                <img src="${imageUrl}" alt="${artist} - ${title}" class="w-full h-auto object-cover rounded-t-lg">
                 <div class="absolute top-2 left-2 px-2 py-1 text-xs font-semibold text-gray-900 rounded-full ${valueClass}">
-                    $${record.estimated_value_low.toFixed(2)} - $${record.estimated_value_high.toFixed(2)}
+                    $${lowValue} - $${estHighValue}
                 </div>
             </div>
             <div class="p-3">
-                <h3 class="text-lg font-heading font-bold text-[var(--color-text-primary)] truncate">${record.title}</h3>
-                <p class="text-sm text-[var(--color-text-secondary)] mb-2 truncate">${record.artist}</p>
+                <h3 class="text-lg font-heading font-bold text-[var(--color-text-primary)] truncate">${title}</h3>
+                <p class="text-sm text-[var(--color-text-secondary)] mb-2 truncate">${artist}</p>
                 <div class="text-xs text-[var(--color-text-secondary)]">
-                    <span class="font-bold text-[var(--color-accent-teal)]">${record.original_release_year}</span> &middot; 
-                    ${record.label}
+                    <span class="font-bold text-[var(--color-accent-teal)]">${year}</span> &middot; 
+                    ${label}
                 </div>
             </div>
         </div>
@@ -248,6 +267,8 @@ function createRecordCard(record) {
  * @param {HTMLElement} container The container to render cards into.
  */
 function renderRecords(records, container) {
+    if (!container) return; // Critical safety check
+
     container.innerHTML = records.map(createRecordCard).join('');
 
     // Update the counter in the header (if it exists)
@@ -287,6 +308,15 @@ async function initFirebase() {
                 userId = crypto.randomUUID(); // Fallback ID for non-authenticated states
             }
             isAuthReady = true;
+
+            // Update the user ID display element
+            const userIdDisplay = document.getElementById('user-id-display');
+            if (userIdDisplay) {
+                userIdDisplay.textContent = userId;
+            }
+
+            console.log(`Auth Ready. User ID: ${userId}`);
+
         });
 
     } catch (e) {
@@ -305,13 +335,12 @@ async function initFirebase() {
 async function startDataListener(recordsContainer, messageBox) {
     // 1. Load initial data from JSON
     const initialCollection = await fetchInitialCollection();
-    // Use an anonymous ID temporarily if Firebase isn't fully ready
-    userId = userId || crypto.randomUUID(); 
 
     // 2. Load Firestore data once auth is ready
     const loadFirestoreData = () => {
-        if (!db || !userId) {
-            // If Firebase or auth failed, just use the initial collection
+        // We now check for auth readiness here, ensuring we have a userId before querying Firestore
+        if (!db || !isAuthReady) {
+            // If Firebase or auth failed/not ready, just use the initial collection
             allRecords = initialCollection;
             renderRecords(allRecords, recordsContainer);
             return;
@@ -332,11 +361,12 @@ async function startDataListener(recordsContainer, messageBox) {
             const combinedRecords = new Map();
 
             // 1. Add Firestore records
-            firestoreRecords.forEach(record => combinedRecords.set(record.id, record));
+            firestoreRecords.forEach(record => combinedRecords.set(record.id.toString(), record));
 
             // 2. Add initial records, but only if they don't already exist in Firestore (i.e., not yet saved)
             initialCollection.forEach(record => {
-                if (!combinedRecords.has(record.id.toString())) { // Ensure ID match
+                // Initial JSON data uses numeric IDs; Firestore data uses string IDs. Must match types.
+                if (!combinedRecords.has(record.id.toString())) { 
                     combinedRecords.set(record.id.toString(), record);
                 }
             });
@@ -355,14 +385,23 @@ async function startDataListener(recordsContainer, messageBox) {
         });
     };
 
-    // Wait for the authentication state to be fully resolved
-    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
-        // This runs when Firebase has finished its initial check
-        userId = user ? user.uid : crypto.randomUUID();
-        isAuthReady = true;
+    // The onAuthStateChanged listener in initFirebase() triggers this logic
+    // when the state is known. We ensure loadFirestoreData runs once the state is set.
+    // If auth is already ready (which happens quickly), we run it immediately.
+    if (isAuthReady) {
         loadFirestoreData();
-        unsubscribeAuth(); // Stop listening after the first time
-    });
+    } else {
+        // If not ready, we rely on the onAuthStateChanged listener to set isAuthReady
+        // and let the data flow start from there. We'll wait until the auth state is confirmed.
+        // For the first load, we need to ensure the listener is registered.
+        
+        // This part is crucial: we attach a temporary listener just to make sure 
+        // the initial data load is correctly synchronized with authentication.
+        const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+            loadFirestoreData();
+            unsubscribeAuth(); // Stop listening after the first successful data load
+        });
+    }
 }
 
 /**
@@ -448,7 +487,7 @@ async function initApp() {
         // 1. Show loading indicator
         loadingIndicator.style.display = 'flex';
 
-        // 2. Get remaining necessary DOM elements
+        // 2. Get necessary DOM elements
         const searchInput = document.getElementById('search-input');
         const filterBtn = document.getElementById('filter-btn');
         const recordsContainer = document.getElementById('records-container');
@@ -462,61 +501,84 @@ async function initApp() {
         const filterYearTo = document.getElementById('filter-year-to');
 
 
-        // 3. Initialize Firebase
+        // 3. Initialize Firebase (Handles Auth and sets up the onAuthStateChanged listener)
         await initFirebase();
 
         // 4. Start listening to the data (this handles initial data load and real-time updates)
         await startDataListener(recordsContainer, messageBox);
 
-        // 5. Set up Event Listeners (Defensive checks added to prevent "null" errors)
+        // 5. Set up Event Listeners (Isolated Checks for Resilience)
         
+        // Search Input Listener
         if (searchInput && recordsContainer) {
             searchInput.addEventListener('input', () => handleSearch(searchInput.value, recordsContainer));
         } else {
-             console.warn('Search input not found. Search functionality disabled.');
+             console.warn(`[DOM Check Fail] Search functionality disabled. searchInput exists: ${!!searchInput}, recordsContainer exists: ${!!recordsContainer}`);
         }
 
+        // Filter Button Listener
         if (filterBtn && filterModal) {
             filterBtn.addEventListener('click', () => toggleModal(filterModal));
         } else {
-             console.warn('Filter button not found. Filter opening disabled.');
+             console.warn(`[DOM Check Fail] Filter button opening disabled. filterBtn exists: ${!!filterBtn}, filterModal exists: ${!!filterModal}`);
         }
 
-        // Modal and Filter Listeners
-        if (closeModalButton && filterModal && applyFilterButton && resetFilterButton) {
+        // --- Modal/Filter Listeners (MUST check for existence before attaching) ---
+
+        if (closeModalButton && filterModal) {
             closeModalButton.addEventListener('click', () => toggleModal(filterModal));
-            
+        } else {
+             console.warn(`[DOM Check Fail] Close Modal Button functionality disabled. closeModalButton exists: ${!!closeModalButton}`);
+        }
+
+        if (filterModal) {
             // Close modal if user clicks on the backdrop
             filterModal.addEventListener('click', (e) => {
                 if (e.target === filterModal) {
                     toggleModal(filterModal);
                 }
             });
-
-            // Pass all required elements to the handlers
+        }
+        
+        // Check core filter buttons before adding their complex handlers
+        if (applyFilterButton && filterModal && recordsContainer && messageBox) {
             applyFilterButton.addEventListener('click', () => applyFilter(filterModal, recordsContainer, messageBox, applyFilterButton));
-            resetFilterButton.addEventListener('click', () => resetFilters(filterModal, recordsContainer, messageBox, applyFilterButton));
-
-            // Listeners for dynamic filter inputs
-            if (filterFormatSelect) {
-                 filterFormatSelect.addEventListener('change', (e) => updateFilterState('format', e.target.value));
-            }
-            if (filterYearFrom) {
-                filterYearFrom.addEventListener('input', (e) => updateFilterState('yearFrom', parseInt(e.target.value) || null));
-            }
-            if (filterYearTo) {
-                filterYearTo.addEventListener('input', (e) => updateFilterState('yearTo', parseInt(e.target.value) || null));
-            }
-
         } else {
-            console.warn('One or more filter modal elements are missing. Modal functionality disabled.');
+             console.warn(`[DOM Check Fail] Apply Filter Button functionality disabled. applyFilterButton exists: ${!!applyFilterButton}`);
+        }
+
+        if (resetFilterButton && filterModal && recordsContainer && messageBox) {
+            resetFilterButton.addEventListener('click', () => resetFilters(filterModal, recordsContainer, messageBox, applyFilterButton));
+        } else {
+             console.warn(`[DOM Check Fail] Reset Filter Button functionality disabled. resetFilterButton exists: ${!!resetFilterButton}`);
+        }
+
+
+        // Listeners for dynamic filter inputs (Individual checks)
+        if (filterFormatSelect) {
+             filterFormatSelect.addEventListener('change', (e) => updateFilterState('format', e.target.value));
+        } else {
+             console.warn(`[DOM Check Fail] Filter Format Select functionality disabled. filterFormatSelect exists: ${!!filterFormatSelect}`);
+        }
+
+        if (filterYearFrom) {
+            filterYearFrom.addEventListener('input', (e) => updateFilterState('yearFrom', parseInt(e.target.value) || null));
+        } else {
+             console.warn(`[DOM Check Fail] Filter Year From functionality disabled. filterYearFrom exists: ${!!filterYearFrom}`);
+        }
+
+        if (filterYearTo) {
+            filterYearTo.addEventListener('input', (e) => updateFilterState('yearTo', parseInt(e.target.value) || null));
+        } else {
+             console.warn(`[DOM Check Fail] Filter Year To functionality disabled. filterYearTo exists: ${!!filterYearTo}`);
         }
         
         // 6. Hide loading indicator after successful init
         loadingIndicator.style.display = 'none';
+        showMessage(messageBox, "Vinyl Archiver Initialized. Ready to rock!", 'success');
 
     } catch (error) {
-        // FIX 7: Pass the messageBox element to showMessage
+        // Pass the messageBox element to showMessage
         showMessage(messageBox, `Failed to initialize application: ${error.message}`, 'error');
         // Safely hide loading indicator in case of error
         if (loadingIndicator) {
@@ -537,7 +599,6 @@ window.onload = initApp;
 
 /**
  * Saves a new record to the user's private collection in Firestore.
- * FIX: Now requires the messageBox element to be passed.
  * @param {Object} record The record object to save.
  * @param {HTMLElement} messageBox The message box element.
  */
