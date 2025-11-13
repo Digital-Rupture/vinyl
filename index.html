@@ -7,30 +7,24 @@
     <!-- Load Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script> 
     
-    <!-- LOAD CUSTOM STYLES -->
-    <link rel="stylesheet" href="./styles.css">
-
-    <!-- Load Font Awesome for icons -->
-    <!-- Apple, Google, Facebook, Microsoft icons for SSO -->
-    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+    <!-- LOAD CUSTOM STYLES - Path fixed to root folder -->
+    <link rel="stylesheet" href="styles.css">
 </head>
-<body class="bg-[var(--color-background)] min-h-screen font-body text-[var(--color-text-primary)]">
+<body class="bg-gray-100 min-h-screen">
 
-    <!-- Message Box for Feedback -->
+    <!-- Message Box for notifications (Replaces alert()) -->
     <div id="message-box" class="message-box fixed top-4 right-4 z-50 p-3 rounded-lg shadow-xl hidden"></div>
 
     <!-- Header / Navbar -->
-    <header class="bg-[var(--color-surface)] shadow-lg sticky top-0 z-10 border-b border-[var(--color-accent-copper)]">
+    <header class="bg-gray-900 text-white shadow-lg sticky top-0 z-10">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col md:flex-row justify-between items-center">
-            <h1 class="text-3xl font-extrabold tracking-tight mb-2 md:mb-0 font-heading">
-                <span class="text-[var(--color-accent-copper)]">Vinyl</span> Archiver
+            <h1 class="text-3xl font-extrabold tracking-tight mb-2 md:mb-0">
+                <span class="text-yellow-400">Vinyl</span> Archiver
             </h1>
-            
             <div class="flex items-center space-x-4 w-full md:w-auto">
-                 <input type="text" id="search-input" placeholder="Search by Artist or Title..."
-                       class="flex-grow md:max-w-xs bg-[var(--color-background)] text-[var(--color-text-primary)] border border-[var(--color-text-secondary)] rounded-lg p-2 focus:ring-[var(--color-accent-teal)] focus:border-[var(--color-accent-teal)]">
-                
-                <button id="filter-btn" class="flex-shrink-0 bg-[var(--color-accent-teal)] hover:bg-[var(--color-accent-copper)] text-gray-900 font-bold py-2 px-4 rounded-lg shadow-md transition duration-150 transform hover:scale-105">
+                <input type="text" id="search-input" placeholder="Search by Artist or Title..." 
+                       class="text-gray-900 p-2 rounded-lg shadow-inner w-full md:w-64 focus:ring-yellow-500 focus:border-yellow-500 transition duration-150">
+                <button id="filter-btn" class="bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-bold py-2 px-4 rounded-lg shadow-md transition duration-150 transform hover:scale-105">
                     Filter
                 </button>
             </div>
@@ -39,79 +33,46 @@
 
     <!-- Main Content Area -->
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <!-- Auth Status & Sign-In/Sign-Out -->
-        <section id="auth-buttons-container" class="mb-12 p-6 bg-[var(--color-surface)] rounded-xl shadow-2xl border-l-4 border-[var(--color-accent-teal)]">
-            <div class="flex flex-col md:flex-row justify-between items-start md:items-center">
-                
-                <div class="mb-4 md:mb-0">
-                    <h2 class="text-2xl font-bold font-heading mb-1 text-[var(--color-text-primary)]">
-                        Authentication Status
-                    </h2>
-                    <p id="auth-status" class="text-sm font-semibold text-red-400">
-                        Please sign in to save your custom records.
-                    </p>
-                    <p class="text-xs text-[var(--color-text-secondary)] mt-1" id="user-id-display">UID: N/A</p>
+        <!-- Collection Display Area -->
+        <div id="collection-grid" class="mt-8 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+            <!-- Album cards will be rendered here by JavaScript -->
+        </div>
+
+        <!-- Loading Indicator -->
+        <div id="loading-indicator" class="text-center mt-12 text-gray-700 text-xl hidden">Loading your collection...</div>
+
+        <!-- Empty State Message -->
+        <div id="empty-state" class="text-center mt-12 p-8 border-2 border-dashed border-gray-400 rounded-lg hidden">
+            <h3 class="text-2xl font-semibold text-gray-600">No Records Found</h3>
+            <p class="text-gray-500 mt-2">Try adjusting your search or filter criteria.</p>
+        </div>
+    </main>
+
+    <!-- Filter Modal (Hidden by Default) -->
+    <div id="filter-modal" class="fixed inset-0 bg-black bg-opacity-75 z-50 flex justify-center items-center hidden">
+        <div class="bg-white rounded-xl shadow-2xl p-6 w-11/12 max-w-md transform transition-all scale-100 md:scale-95">
+            
+            <!-- Modal Header -->
+            <div class="flex justify-between items-center pb-4 border-b border-gray-200">
+                <h2 class="text-2xl font-bold text-gray-800">Advanced Filters</h2>
+                <button id="close-modal-button" class="text-gray-500 hover:text-gray-700 text-3xl leading-none">&times;</button>
+            </div>
+
+            <!-- Modal Body: Filter Options -->
+            <div class="mt-4 space-y-4 text-gray-800">
+
+                <!-- Format Filter (Placeholder for future feature) -->
+                <div>
+                    <label for="filter-format" class="block text-sm font-medium text-gray-700 mb-2">Format (e.g., LP, 7", CD)</label>
+                    <select id="filter-format" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-yellow-500 focus:border-yellow-500">
+                        <option value="">All Formats (Placeholder)</option>
+                        <option value="LP">LP (12")</option>
+                        <option value="7">Single (7")</option>
+                        <option value="CD">CD</option>
+                    </select>
                 </div>
 
-                <!-- Sign Out Button (Initially Hidden) -->
-                <button id="sign-out-btn" class="hidden bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition duration-150 transform hover:scale-105">
-                    <i class="fas fa-sign-out-alt mr-2"></i> Sign Out
-                </button>
-            </div>
-
-            <!-- SSO Buttons (Initially Visible) -->
-            <div id="sso-buttons" class="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4">
-                <button id="google-btn" class="sso-btn bg-white hover:bg-gray-100 text-gray-800 py-3 rounded-lg shadow-md font-semibold transition duration-150 flex items-center justify-center">
-                    <i class="fab fa-google mr-2"></i> Google
-                </button>
-                <button id="apple-btn" class="sso-btn bg-gray-900 hover:bg-gray-800 text-white py-3 rounded-lg shadow-md font-semibold transition duration-150 flex items-center justify-center">
-                    <i class="fab fa-apple mr-2"></i> Apple
-                </button>
-                <button id="facebook-btn" class="sso-btn bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg shadow-md font-semibold transition duration-150 flex items-center justify-center">
-                    <i class="fab fa-facebook-f mr-2"></i> Facebook
-                </button>
-                <button id="microsoft-btn" class="sso-btn bg-yellow-500 hover:bg-yellow-600 text-gray-900 py-3 rounded-lg shadow-md font-semibold transition duration-150 flex items-center justify-center">
-                    <i class="fab fa-microsoft mr-2"></i> Microsoft
-                </button>
-            </div>
-        </section>
-        
-        <!-- Status and Count -->
-        <div class="flex justify-between items-center mb-6">
-            <p class="text-[var(--color-text-secondary)]">Collection Status | Total Records: <span id="record-count" class="font-bold text-[var(--color-accent-teal)]">0</span></p>
-            <!-- Loading Indicator -->
-            <div id="loading-indicator" class="flex items-center space-x-2 text-[var(--color-accent-copper)]" style="display: none;">
-                <svg class="animate-spin -ml-1 mr-3 h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Loading Data...
-            </div>
-        </div>
-
-        <!-- Record Grid -->
-        <div id="record-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
-            <!-- Album Cards will be injected here by app.js -->
-        </div>
-
-    </main>
-    
-    <!-- Filter Modal -->
-    <div id="filter-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 z-50 flex justify-center items-center p-4">
-        <div class="bg-white rounded-xl shadow-2xl max-w-lg w-full p-8 transition-all transform scale-100">
-            <!-- Modal Header -->
-            <div class="flex justify-between items-center border-b pb-4 mb-6">
-                <h3 class="text-2xl font-bold text-gray-800 font-heading">Filter Collection</h3>
-                <button id="close-modal-button" class="text-gray-500 hover:text-gray-800 transition">
-                    <i class="fas fa-times text-xl"></i>
-                </button>
-            </div>
-
-            <!-- Filter Options -->
-            <div class="space-y-4">
-                <p class="text-sm text-gray-600">Apply filters to refine the collection view.</p>
-
-                <!-- Year Filter Group -->
+                <!-- Release Year Filter -->
                 <div class="flex space-x-4">
                     <div class="flex-1">
                         <label for="filter-year-from" class="block text-sm font-medium text-gray-700 mb-2">Year From</label>
@@ -143,7 +104,7 @@
     </div>
 
 
-    <!-- Load the application script (MUST be type="module" for Firebase imports) -->
-    <script type="module" src="./app.js"></script> 
+    <!-- Load the main application script (path fixed to root folder) -->
+    <script type="module" src="app.js"></script> 
 </body>
 </html>
