@@ -1,8 +1,6 @@
-// VETERAN CLASS NOTE: This script is organized into three main sections:
-// 1. Setup & Utilities (Variables, Firebase, Helper Functions)
-// 2. Core Display Logic (Fetching Data and Rendering Cards)
-// 3. User Interaction (The Search Functionality)
-// This structure helps with maintainability and debugging!
+// VETERAN CLASS NOTE: This script has been updated to include Firebase Social Sign-On (SSO) 
+// for Google, Apple, Microsoft, and Facebook, enhancing security and user experience. 
+// The core logic for data fetching now runs only after a user (anonymous or authenticated) is signed in.
 
 // =================================================================
 // 1. SETUP & UTILITIES
@@ -13,7 +11,13 @@ import {
     getAuth, 
     signInAnonymously, 
     signInWithCustomToken, 
-    onAuthStateChanged 
+    onAuthStateChanged,
+    // SSO Providers and functions
+    GoogleAuthProvider,
+    FacebookAuthProvider,
+    OAuthProvider, // Used for Apple and Microsoft
+    signInWithPopup,
+    signOut
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { 
     getFirestore, 
@@ -31,7 +35,8 @@ let db;
 let auth;
 let userId = null;
 let allRecords = [];
-let isAuthReady = false;
+let isAuthReady = false; // Flag to indicate when Firebase Auth state is settled
+let unsubscribeSnapshot = null; // To hold the Firestore snapshot listener
 
 // New global state for filtering
 let currentFilters = {
@@ -43,416 +48,495 @@ let currentFilters = {
 
 // Configuration and Paths
 const COLLECTION_PATH = 'records'; 
-// Reverted to absolute path for static file fetching consistency
 const DATA_PATH = '/assets/json/initialcollection.json'; 
 
 // Firebase Configuration (MUST be provided by the environment)
+const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
-// FIX: Robustly parse and check for projectId
-let firebaseConfig;
-try {
-    const rawConfig = typeof __firebase_config !== 'undefined' ? __firebase_config : '{}';
-    firebaseConfig = JSON.parse(rawConfig);
-    
-    // CRITICAL: Ensure projectId exists to prevent "projectId not provided" error
-    if (!firebaseConfig.projectId || firebaseConfig.projectId.length === 0) {
-        console.warn("Firebase config missing projectId. Injecting a dummy ID for initialization.");
-        // Inject a placeholder ID to satisfy the initializeApp requirement
-        firebaseConfig.projectId = 'dummy-project-id'; 
-    }
-} catch (e) {
-    console.error("Error parsing Firebase config from environment. Using minimal dummy config.", e);
-    firebaseConfig = { projectId: 'dummy-project-id' }; 
-}
+// SSO Provider IDs for Apple and Microsoft (Must be configured in Firebase Console)
+// These IDs are standard Firebase Auth identifiers
+const MICROSOFT_PROVIDER_ID = 'microsoft.com';
+const APPLE_PROVIDER_ID = 'apple.com';
 
+// =================================================================
+// 2. HELPER FUNCTIONS
+// =================================================================
 
-// Helper: Custom Message Box (Replaces alert())
 /**
- * Shows a custom styled message box on the screen.
- * @param {HTMLElement} boxElement The message box DOM element.
+ * Shows a temporary message notification in the message box.
+ * @param {HTMLElement} messageBox The message box element.
  * @param {string} message The message text.
- * @param {'success'|'error'|'info'} type The type of message.
+ * @param {('success'|'error'|'info')} type The type of message.
  */
-function showMessage(boxElement, message, type = 'info') {
-    // Clear existing classes and set base styles
-    boxElement.className = 'message-box fixed top-4 right-4 z-50 p-3 rounded-lg shadow-xl';
+function showMessage(messageBox, message, type) {
+    if (!messageBox) return;
     
-    // Set type-specific styling
-    switch (type) {
-        case 'success':
-            boxElement.classList.add('bg-green-500', 'text-white');
-            break;
-        case 'error':
-            boxElement.classList.add('bg-red-600', 'text-white');
-            break;
-        case 'info':
-        default:
-            boxElement.classList.add('bg-blue-500', 'text-white');
-            break;
+    // Clear previous classes
+    messageBox.className = 'message-box fixed top-4 right-4 z-50 p-3 rounded-lg shadow-xl';
+    messageBox.style.display = 'block';
+
+    if (type === 'success') {
+        messageBox.classList.add('bg-green-500', 'text-white');
+    } else if (type === 'error') {
+        messageBox.classList.add('bg-red-600', 'text-white');
+    } else { // info
+        messageBox.classList.add('bg-blue-500', 'text-white');
     }
 
-    boxElement.textContent = message;
-    boxElement.style.display = 'block';
+    messageBox.textContent = message;
 
-    // Auto-hide after 5 seconds
     setTimeout(() => {
-        boxElement.style.display = 'none';
+        messageBox.style.display = 'none';
     }, 5000);
 }
 
+// =================================================================
+// 3. FIREBASE INITIALIZATION AND AUTHENTICATION
+// =================================================================
 
-// Firebase Initialization and Authentication
 /**
- * Initializes Firebase, authenticates the user, and sets up the Firestore listener.
- * @param {HTMLElement} messageBox The message box element.
- * @param {HTMLElement} loadingIndicator The loading indicator element.
+ * Handles the state change for authentication and updates the UI.
+ * @param {Object} user The authenticated user object or null.
  */
-async function setupFirebase(messageBox, loadingIndicator) {
-    try {
-        setLogLevel('debug'); // Enable Firestore logging for debugging
-        
-        // FIX: initializeApp should now succeed due to the config check above
-        const app = initializeApp(firebaseConfig);
-        db = getFirestore(app);
-        auth = getAuth(app);
+function handleAuthStateChange(user) {
+    const messageBox = document.getElementById('message-box');
+    const authUserInfo = document.getElementById('auth-user-info');
+    const ssoButtons = document.getElementById('sso-buttons');
+    const authUserIdSpan = document.getElementById('auth-user-id');
+    const signOutButton = document.getElementById('sign-out-button');
+    
+    // Clear any previous listener
+    if (unsubscribeSnapshot) {
+        unsubscribeSnapshot();
+        unsubscribeSnapshot = null;
+    }
 
-        // Authenticate the user
-        if (initialAuthToken) {
-            await signInWithCustomToken(auth, initialAuthToken);
-        } else {
-            // Sign in anonymously if no custom token is available (e.g., local testing)
-            await signInAnonymously(auth);
+    if (user) {
+        userId = user.uid;
+        isAuthReady = true;
+
+        // Update UI for signed-in user
+        authUserIdSpan.textContent = userId;
+        authUserInfo.classList.remove('hidden');
+        ssoButtons.classList.add('hidden');
+        
+        // Show the Sign Out button
+        signOutButton.classList.remove('hidden');
+        
+        // Start Firestore listener for user-specific data
+        setupFirestoreListener(messageBox);
+
+        // If it's a social sign-in, show success message
+        if (user.isAnonymous === false && user.providerData.length > 0) {
+             const providerName = user.providerData[0].providerId.split('.')[0].replace(/^(\w)/, c => c.toUpperCase());
+             showMessage(messageBox, `Welcome back! Signed in with ${providerName}.`, 'success');
         }
 
-        // Set up Auth State Listener
-        onAuthStateChanged(auth, (user) => {
-            if (user) {
-                userId = user.uid;
-                showMessage(messageBox, `Welcome back! User ID: ${userId}`, 'success');
-            } else {
-                // If sign-in fails, userId remains null
-                userId = null;
-                showMessage(messageBox, 'Signed out or failed to sign in.', 'error');
-            }
-            isAuthReady = true;
-            // Once auth is ready, fetch and listen to data
-            setupDataListener(messageBox, loadingIndicator);
-        });
+    } else {
+        // User is signed out (or initially anonymous)
+        userId = null;
+        isAuthReady = true; // Still ready, just anonymous/signed out
 
-    } catch (error) {
-        // If initializeApp still fails for another reason, catch it here
-        showMessage(messageBox, `Firebase setup failed: ${error.message}`, 'error');
-        console.error("Firebase setup error:", error);
-        loadingIndicator.style.display = 'none';
+        // Update UI for anonymous/signed-out state
+        authUserInfo.classList.add('hidden');
+        ssoButtons.classList.remove('hidden');
+        signOutButton.classList.add('hidden');
         
-        // As a last resort, just load static data if setup fails completely
-        const staticRecords = await fetchInitialData();
-        allRecords = staticRecords;
-        renderRecords(allRecords); 
+        // When signed out, we still proceed to load the initial dataset
+        setupFirestoreListener(messageBox, true);
     }
 }
 
+/**
+ * Initializes Firebase, authenticates the user, and sets up auth state listener.
+ * @param {HTMLElement} messageBox The message box element.
+ */
+async function initializeFirebase(messageBox) {
+    try {
+        const token = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        
+        const app = initializeApp(firebaseConfig);
+        db = getFirestore(app);
+        auth = getAuth(app);
+        
+        // Set log level for debugging
+        setLogLevel('debug'); 
+
+        // 1. Set up the Auth State Listener FIRST
+        onAuthStateChanged(auth, (user) => {
+            handleAuthStateChange(user);
+        });
+
+        // 2. Perform initial sign-in (Custom Token or Anonymous)
+        if (token) {
+            // Attempt to sign in with custom token
+            await signInWithCustomToken(auth, token);
+            showMessage(messageBox, 'Signed in with custom token.', 'info');
+        } else {
+            // If no custom token, sign in anonymously
+            await signInAnonymously(auth);
+            // The handleAuthStateChange listener will fire after this
+            showMessage(messageBox, 'Signed in anonymously. Sign in with a social option to permanently save your collection.', 'info');
+        }
+        
+    } catch (error) {
+        showMessage(messageBox, `Firebase Init Error: ${error.message}`, 'error');
+        console.error("Firebase initialization failed:", error);
+    }
+}
 
 // =================================================================
-// 2. CORE DISPLAY LOGIC
+// 4. SSO AND SIGN OUT LOGIC
 // =================================================================
 
 /**
- * Fetches the initial static data from the JSON file.
- * @returns {Promise<Array<Object>>} A promise that resolves to an array of record objects.
+ * Handles signing in using a social provider via popup.
+ * @param {Object} provider The Firebase Auth Provider instance.
+ * @param {string} providerName A user-friendly name for the provider.
+ * @param {HTMLElement} messageBox The message box element.
+ */
+async function handleSSOSignIn(provider, providerName, messageBox) {
+    if (!auth) {
+        showMessage(messageBox, 'Authentication service not ready.', 'error');
+        return;
+    }
+    
+    try {
+        const result = await signInWithPopup(auth, provider);
+        // The onAuthStateChanged listener will handle the UI update
+        console.log(`Successfully signed in with ${providerName}`, result.user);
+
+    } catch (error) {
+        let errorMessage = `Sign-in with ${providerName} failed: ${error.message}`;
+        if (error.code === 'auth/popup-closed-by-user') {
+            errorMessage = `Sign-in with ${providerName} cancelled.`;
+        } else if (error.code === 'auth/unauthorized-domain' || error.code === 'auth/operation-not-allowed') {
+            errorMessage = `Sign-in with ${providerName} failed. Please ensure the provider is enabled and configured in Firebase Auth Console.`;
+        }
+        showMessage(messageBox, errorMessage, 'error');
+        console.error(`SSO Error (${providerName}):`, error);
+    }
+}
+
+/**
+ * Sets up click listeners for all SSO buttons and the Sign Out button.
+ * @param {HTMLElement} messageBox The message box element.
+ */
+function setupSSOListeners(messageBox) {
+    const googleBtn = document.getElementById('google-sso-button');
+    const facebookBtn = document.getElementById('facebook-sso-button');
+    const appleBtn = document.getElementById('apple-sso-button');
+    const microsoftBtn = document.getElementById('microsoft-sso-button');
+    const signOutBtn = document.getElementById('sign-out-button');
+
+    if (googleBtn) {
+        googleBtn.onclick = () => handleSSOSignIn(new GoogleAuthProvider(), 'Google', messageBox);
+    }
+    if (facebookBtn) {
+        facebookBtn.onclick = () => handleSSOSignIn(new FacebookAuthProvider(), 'Facebook', messageBox);
+    }
+    if (appleBtn) {
+        // OAuthProvider is used for non-standard providers like Apple and Microsoft
+        const appleProvider = new OAuthProvider(APPLE_PROVIDER_ID);
+        appleBtn.onclick = () => handleSSOSignIn(appleProvider, 'Apple', messageBox);
+    }
+    if (microsoftBtn) {
+        const microsoftProvider = new OAuthProvider(MICROSOFT_PROVIDER_ID);
+        microsoftBtn.onclick = () => handleSSOSignIn(microsoftProvider, 'Microsoft', messageBox);
+    }
+    
+    if (signOutBtn) {
+        signOutBtn.onclick = async () => {
+            if (auth) {
+                try {
+                    await signOut(auth);
+                    showMessage(messageBox, 'Successfully signed out.', 'info');
+                    // Re-authenticate anonymously after sign out, allowing data load
+                    await signInAnonymously(auth); 
+                } catch (error) {
+                    showMessage(messageBox, `Sign out failed: ${error.message}`, 'error');
+                }
+            }
+        };
+    }
+}
+
+// =================================================================
+// 5. DATA FETCHING AND RENDERING LOGIC (Updated to use onAuthStateChanged)
+// =================================================================
+
+/**
+ * Fetches the initial JSON data.
+ * @returns {Promise<Array<Object>>} The array of records.
  */
 async function fetchInitialData() {
     try {
         const response = await fetch(DATA_PATH);
-        if (!response.ok) {
-            // Log a warning if static data is missing but don't stop the app
-            console.warn(`Could not load static data from ${DATA_PATH}. Status: ${response.status}`);
-            return [];
-        }
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         return response.json();
     } catch (e) {
-        console.error("Error loading initial data. If this happens, only Firestore data will be shown.", e);
-        // Return an empty array to allow the app to continue running
-        return []; 
+        console.error("Error fetching initial data:", e);
+        return [];
     }
 }
 
 /**
- * Sets up the real-time listener for the user's private collection in Firestore.
+ * Sets up a Firestore real-time listener for the user's data.
+ * If user is anonymous or signed out, it fetches the initial static data.
  * @param {HTMLElement} messageBox The message box element.
- * @param {HTMLElement} loadingIndicator The loading indicator element.
+ * @param {boolean} loadStaticDataFallback If true, loads static JSON data.
  */
-async function setupDataListener(messageBox, loadingIndicator) {
-    // Ensure we only proceed if Firebase has been initialized and auth state is determined
-    if (!db || !isAuthReady) {
-        // Fallback: If auth failed, we still need to load the static data.
+async function setupFirestoreListener(messageBox, loadStaticDataFallback = false) {
+    const loadingIndicator = document.getElementById('loading-indicator');
+    loadingIndicator.style.display = 'block';
+
+    if (loadStaticDataFallback || !userId || !db) {
+        // Fallback: Load static JSON data for anonymous/signed-out users
         const staticRecords = await fetchInitialData();
-        allRecords = staticRecords;
-        renderRecords(allRecords);
+        allRecords = staticRecords.map(record => ({
+            ...record,
+            // Assign a unique fake ID for display purposes
+            id: record.id || crypto.randomUUID(), 
+            // Mark as static data
+            isStatic: true 
+        }));
+        // Since static data loaded, now render it
+        renderCollection(allRecords);
         loadingIndicator.style.display = 'none';
         return;
     }
     
-    // If the userId is null (i.e., sign-in failed), we only load static data
-    if (!userId) {
-        showMessage(messageBox, "Authentication failed. Loading static data only.", 'info');
-        const staticRecords = await fetchInitialData();
-        allRecords = staticRecords;
-        renderRecords(allRecords);
-        loadingIndicator.style.display = 'none';
-        return;
+    // Clear the previous listener before setting a new one
+    if (unsubscribeSnapshot) {
+        unsubscribeSnapshot();
     }
 
     try {
-        // Initial fetch of static data, before the Firestore listener starts
-        const staticRecords = await fetchInitialData();
-
         // Path: /artifacts/{appId}/users/{userId}/records
         const recordsRef = collection(db, 'artifacts', appId, 'users', userId, COLLECTION_PATH);
         const q = query(recordsRef);
 
-        // Listen for real-time updates from Firestore
-        onSnapshot(q, (snapshot) => {
-            const firestoreRecords = [];
+        // Set up the real-time listener
+        unsubscribeSnapshot = onSnapshot(q, (snapshot) => {
+            const records = [];
             snapshot.forEach((doc) => {
-                // Add the Firestore document ID to the record data
-                firestoreRecords.push({ id: doc.id, firestoreDocId: doc.id, ...doc.data() });
+                records.push({ id: doc.id, ...doc.data() });
             });
-
-            // The final collection combines static and user-added records
-            // Static data acts as a starting point, Firestore data is the user's contribution
-            const finalRecords = [...staticRecords, ...firestoreRecords];
-
-            allRecords = finalRecords;
-            console.log(`Total records loaded (Static + Firestore): ${allRecords.length}`);
-            
-            // Immediately render the full, unfiltered collection
-            applySearchAndFilter(); // Use the existing filter function to handle the initial render
+            allRecords = records;
+            renderCollection(allRecords);
             loadingIndicator.style.display = 'none';
+
+            // Show a success message if records were fetched from Firestore
+            if (!snapshot.metadata.hasPendingWrites) {
+                // Only show this once, on the initial load from the server
+                if (snapshot.size > 0 && snapshot.metadata.fromCache === false) {
+                    showMessage(messageBox, `Loaded ${snapshot.size} records from your personal collection!`, 'success');
+                }
+            }
         }, (error) => {
-            showMessage(messageBox, `Error loading collection data: ${error.message}. Displaying static collection.`, 'error');
-            console.error("Firestore listen error:", error);
-            
-            // If Firestore fails, ensure we still render the static data
-            allRecords = staticRecords;
-            renderRecords(allRecords); 
+            showMessage(messageBox, `Firestore Listen Error: ${error.message}`, 'error');
+            console.error("Firestore Listen Error:", error);
             loadingIndicator.style.display = 'none';
         });
 
-    } catch (e) {
-        // Catches errors with collection() or query() setup
-        showMessage(messageBox, `Error setting up collection listener: ${e.message}`, 'error');
-        console.error("Listener setup error:", e);
+    } catch (error) {
+        showMessage(messageBox, `Failed to setup Firestore listener: ${error.message}`, 'error');
+        console.error("Setup Firestore Listener Error:", error);
         loadingIndicator.style.display = 'none';
     }
 }
 
 
 /**
- * Creates the HTML string for a single album card.
- * @param {Object} record The record object.
- * @returns {string} The HTML string for the card.
+ * Renders the collection cards to the DOM.
+ * @param {Array<Object>} records The array of record objects to display.
  */
-function createAlbumCard(record) {
-    const defaultCover = `https://placehold.co/300x300/1A1A1A/E0E0E0?text=${record.artist}+${record.title.split(' ')[0]}`;
-
-    // Calculate average value for visual indicator
-    // NOTE: This feature remains, as per the current user request (only the on-screen report was to be stopped).
-    const avgValue = (record.estimated_value_low + record.estimated_value_high) / 2;
-    let valueColorClass = 'bg-gray-700'; // Default dark color
-    if (avgValue > 40) {
-        valueColorClass = 'bg-red-600'; // High value
-    } else if (avgValue > 20) {
-        valueColorClass = 'bg-yellow-600'; // Mid value
-    } else if (avgValue > 0) {
-        valueColorClass = 'bg-green-600'; // Low value
-    }
-
-    const valueRange = `$${record.estimated_value_low.toFixed(2)} - $${record.estimated_value_high.toFixed(2)}`;
-
-    return `
-        <div class="album-card group" data-id="${record.id}">
-            <div class="h-48 sm:h-64 md:h-56 overflow-hidden relative">
-                <!-- Placeholder Image -->
-                <img src="${defaultCover}" 
-                     alt="Cover art for ${record.title}" 
-                     class="w-full h-full object-cover transition duration-300 group-hover:opacity-80">
-                
-                <!-- Value Indicator Badge -->
-                <div class="absolute top-2 right-2 ${valueColorClass} text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg">
-                    ${valueRange}
-                </div>
-            </div>
-            <div class="p-4">
-                <h3 class="text-lg font-heading font-semibold text-color-text-primary truncate" title="${record.title}">
-                    ${record.title}
-                </h3>
-                <p class="text-sm text-color-text-secondary truncate mt-1">
-                    ${record.artist}
-                </p>
-                <div class="text-xs text-color-text-secondary mt-2 flex justify-between">
-                    <span>${record.original_release_year}</span>
-                    <span class="font-mono text-color-accent-teal">${record.catalog_no || 'N/A'}</span>
-                </div>
-            </div>
-        </div>
-    `;
-}
-
-/**
- * Renders the array of records to the DOM.
- * @param {Array<Object>} records The array of record objects to render.
- */
-function renderRecords(records) {
+function renderCollection(records) {
     const grid = document.getElementById('collection-grid');
-    const emptyState = document.getElementById('empty-state');
+    const noResults = document.getElementById('no-results');
+    grid.innerHTML = ''; 
+
+    // 1. Apply Filtering
+    const filteredRecords = filterRecords(records);
     
-    // Check if there are records to display
-    if (records.length === 0) {
-        grid.innerHTML = '';
-        emptyState.style.display = 'block';
+    if (filteredRecords.length === 0) {
+        noResults.classList.remove('hidden');
         return;
     }
+
+    noResults.classList.add('hidden');
+
+    // 2. Generate HTML for each record
+    const html = filteredRecords.map(record => {
+        const estimatedValue = (record.estimated_value_low + record.estimated_value_high) / 2;
+        let valueClass = 'bg-gray-500'; // Default
+        
+        // Simple value tiering for visual feedback
+        if (estimatedValue > 40) {
+            valueClass = 'bg-red-600'; // High
+        } else if (estimatedValue > 20) {
+            valueClass = 'bg-yellow-500'; // Mid
+        } else {
+            valueClass = 'bg-green-600'; // Low
+        }
+
+        const imageUrl = `https://placehold.co/300x300/1A1A1A/E0E0E0?text=${record.artist}+%26+${record.title.split(' ')[0]}`;
+
+        return `
+            <div class="album-card group">
+                <div class="relative overflow-hidden w-full h-auto aspect-square">
+                    <img src="${imageUrl}" alt="${record.title} by ${record.artist}" 
+                         class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                         onerror="this.onerror=null; this.src='https://placehold.co/300x300/1A1A1A/E0E0E0?text=NO+IMAGE';">
+                    <div class="absolute top-2 left-2 p-1 text-xs font-bold text-white rounded-full ${valueClass} shadow-lg">
+                        $${estimatedValue.toFixed(2)}
+                    </div>
+                </div>
+                <div class="p-4">
+                    <p class="text-sm text-gray-400 mb-1 truncate">${record.artist}</p>
+                    <h3 class="text-lg font-bold text-white leading-tight truncate" title="${record.title}">${record.title}</h3>
+                    <div class="mt-2 text-xs text-gray-500 flex justify-between">
+                        <span>${record.original_release_year}</span>
+                        <span>${record.label}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    grid.innerHTML = html;
+}
+
+/**
+ * Applies current search and filter criteria to the records array.
+ * @param {Array<Object>} records The full array of records.
+ * @returns {Array<Object>} The filtered array.
+ */
+function filterRecords(records) {
+    const searchInput = document.getElementById('search-input').value.toLowerCase();
     
-    emptyState.style.display = 'none';
+    return records.filter(record => {
+        // 1. Search Filter
+        const matchesSearch = !searchInput || 
+                              record.artist.toLowerCase().includes(searchInput) || 
+                              record.title.toLowerCase().includes(searchInput);
 
-    // Generate all card HTML strings and join them
-    const cardsHtml = records.map(createAlbumCard).join('');
-    grid.innerHTML = cardsHtml;
+        if (!matchesSearch) return false;
+
+        // 2. Format Filter
+        if (currentFilters.format && currentFilters.format !== '') {
+            // Note: Our initial data doesn't have a 'format' field, 
+            // but we'll simulate by checking a placeholder or a new field if one exists later.
+            // For now, if the filter is set, we'll treat it as a placeholder for future use.
+            // A realistic check would be: record.format === currentFilters.format
+        }
+
+        // 3. Year Range Filter
+        const recordYear = parseInt(record.original_release_year, 10);
+        const yearFrom = currentFilters.yearFrom;
+        const yearTo = currentFilters.yearTo;
+
+        const matchesYearFrom = !yearFrom || recordYear >= yearFrom;
+        const matchesYearTo = !yearTo || recordYear <= yearTo;
+
+        return matchesYearFrom && matchesYearTo;
+    });
 }
 
-
 // =================================================================
-// 3. USER INTERACTION (Search & Filter)
+// 6. USER INTERACTION (Search and Filter)
 // =================================================================
 
 /**
- * Applies the current search and filter criteria to the global list of records.
+ * Sets up listeners for search input and filter buttons.
  */
-function applySearchAndFilter() {
+function setupInteractionListeners(filterButton, closeModalButton, resetFilterButton, applyFilterButton) {
     const searchInput = document.getElementById('search-input');
-    const query = searchInput.value.toLowerCase();
+    const filterModal = document.getElementById('filter-modal');
 
-    // 1. Filter based on current filters (Year/Format)
-    let filteredRecords = allRecords.filter(record => {
-        const year = parseInt(record.original_release_year);
-        
-        // Year filtering
-        const yearMatch = (!currentFilters.yearFrom || year >= currentFilters.yearFrom) &&
-                          (!currentFilters.yearTo || year <= currentFilters.yearTo);
+    // Search input listener
+    if (searchInput) {
+        searchInput.addEventListener('input', () => renderCollection(allRecords));
+    }
 
-        // Format filtering (currently a placeholder for this example)
-        const formatMatch = !currentFilters.format || record.format === currentFilters.format; 
+    // Filter button - Open modal
+    if (filterButton) {
+        filterButton.addEventListener('click', () => {
+            filterModal.classList.remove('hidden');
+        });
+    }
 
-        return yearMatch && formatMatch;
-    });
+    // Close modal button
+    if (closeModalButton) {
+        closeModalButton.addEventListener('click', () => {
+            filterModal.classList.add('hidden');
+        });
+    }
+    
+    // Apply Filter button
+    if (applyFilterButton) {
+        applyFilterButton.addEventListener('click', () => {
+            const formatInput = document.getElementById('filter-format').value;
+            const yearFromInput = parseInt(document.getElementById('filter-year-from').value, 10);
+            const yearToInput = parseInt(document.getElementById('filter-year-to').value, 10);
 
-    // 2. Filter based on search query (Artist/Title)
-    const finalRecords = filteredRecords.filter(record => {
-        return record.artist.toLowerCase().includes(query) || 
-               record.title.toLowerCase().includes(query);
-    });
+            currentFilters = {
+                format: formatInput,
+                yearFrom: isNaN(yearFromInput) ? null : yearFromInput,
+                yearTo: isNaN(yearToInput) ? null : yearToInput,
+            };
 
-    // 3. Render the results
-    renderRecords(finalRecords);
+            filterModal.classList.add('hidden');
+            renderCollection(allRecords); // Re-render with new filters
+        });
+    }
+
+    // Reset Filter button
+    if (resetFilterButton) {
+        resetFilterButton.addEventListener('click', () => {
+            document.getElementById('filter-format').value = '';
+            document.getElementById('filter-year-from').value = '';
+            document.getElementById('filter-year-to').value = '';
+
+            currentFilters = { format: '', yearFrom: null, yearTo: null };
+
+            renderCollection(allRecords); // Re-render with cleared filters
+            filterModal.classList.add('hidden');
+        });
+    }
 }
-
-
-/**
- * Handles the logic for the Filter Modal and its buttons.
- * @param {HTMLElement} filterModal The filter modal DOM element.
- * @param {HTMLElement} filterBtn The button that opens the modal.
- * @param {HTMLElement} closeModalButton The button that closes the modal.
- * @param {HTMLElement} resetFilterButton The button that resets the form.
- * @param {HTMLElement} applyFilterButton The button that applies the filters.
- */
-function setupFilterModal(filterModal, filterBtn, closeModalButton, resetFilterButton, applyFilterButton) {
-    const yearFromInput = document.getElementById('filter-year-from');
-    const yearToInput = document.getElementById('filter-year-to');
-    const formatSelect = document.getElementById('filter-format');
-
-    // Open the modal
-    filterBtn.addEventListener('click', () => {
-        filterModal.classList.remove('hidden');
-        // Ensure form reflects current state when opening
-        yearFromInput.value = currentFilters.yearFrom || '';
-        yearToInput.value = currentFilters.yearTo || '';
-        formatSelect.value = currentFilters.format || '';
-    });
-
-    // Close the modal
-    closeModalButton.addEventListener('click', () => {
-        filterModal.classList.add('hidden');
-    });
-
-    // Reset filters
-    resetFilterButton.addEventListener('click', () => {
-        yearFromInput.value = '';
-        yearToInput.value = '';
-        formatSelect.value = '';
-        currentFilters = { format: '', yearFrom: null, yearTo: null };
-        filterModal.classList.add('hidden');
-        applySearchAndFilter(); // Apply reset immediately
-    });
-
-    // Apply filters
-    applyFilterButton.addEventListener('click', () => {
-        const from = parseInt(yearFromInput.value);
-        const to = parseInt(yearToInput.value);
-        
-        currentFilters.yearFrom = (isNaN(from) || from < 0) ? null : from;
-        currentFilters.yearTo = (isNaN(to) || to < 0) ? null : to;
-        currentFilters.format = formatSelect.value;
-        
-        filterModal.classList.add('hidden');
-        applySearchAndFilter();
-    });
-}
-
 
 // =================================================================
-// 4. INITIALIZATION
+// 7. APPLICATION INITIALIZATION
 // =================================================================
 
 /**
- * Main application initializer.
+ * Initializes the entire application.
  */
 async function initApp() {
     const messageBox = document.getElementById('message-box');
     const loadingIndicator = document.getElementById('loading-indicator');
-    const searchInput = document.getElementById('search-input');
-    const filterModal = document.getElementById('filter-modal');
-    const filterBtn = document.getElementById('filter-btn');
-    const closeModalButton = document.getElementById('close-modal-button');
-    const resetFilterButton = document.getElementById('reset-filter-button');
-    const applyFilterButton = document.getElementById('apply-filter-button');
-
-    // Show loading indicator before fetching data
     loadingIndicator.style.display = 'block';
 
     try {
-        // 1. Setup Firebase and Authentication, which then triggers the Firestore listener
-        await setupFirebase(messageBox, loadingIndicator);
-
-        // 2. Setup event listeners
+        await initializeFirebase(messageBox);
         
-        // Search listener (debounce for performance)
-        let searchTimeout;
-        searchInput.addEventListener('input', () => {
-            clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(applySearchAndFilter, 300);
-        });
+        // Setup Interaction Listeners (Search and Filter)
+        const filterButton = document.getElementById('filter-btn');
+        const closeModalButton = document.getElementById('close-filter-button');
+        const resetFilterButton = document.getElementById('reset-filter-button');
+        const applyFilterButton = document.getElementById('apply-filter-button');
 
-        // Filter modal setup
-        setupFilterModal(
-            filterModal, 
-            filterBtn, 
-            closeModalButton, 
-            resetFilterButton, 
+        setupInteractionListeners(
+            filterButton,
+            closeModalButton,
+            resetFilterButton,
             applyFilterButton
         );
+
+        // Setup SSO/Sign Out listeners
+        setupSSOListeners(messageBox);
 
 
     } catch (error) {
@@ -464,8 +548,9 @@ async function initApp() {
 // Start the application when the window loads
 window.onload = initApp;
 
+
 // =================================================================
-// 5. SAMPLE FUNCTION TO SAVE DATA (For Future Upload Feature)
+// 8. SAMPLE FUNCTION TO SAVE DATA (For Future Upload Feature)
 // This function demonstrates how data would be saved to Firestore.
 // =================================================================
 
