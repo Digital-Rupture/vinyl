@@ -3,109 +3,412 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vinyl Archiver | Modern Turntable</title>
-    <script src="https://cdn.tailwindcss.com"></script> 
-    
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <title>Modern Turntable Archive</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles for the 'Modern Turntable' theme */
+        :root {
+            --primary-color: #1a1a1a;
+            --secondary-color: #333333;
+            --accent-color: #fca311;
+            --text-color: #e5e5e5;
+        }
 
-    <link rel="stylesheet" href="./styles.css">
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--primary-color);
+            color: var(--text-color);
+        }
+
+        .card {
+            background-color: var(--secondary-color);
+            border: 1px solid var(--accent-color);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.5);
+        }
+        
+        /* Utility for scrollable sidebar */
+        .sidebar {
+            height: 90vh; /* Adjust based on viewport height */
+            max-height: 90vh;
+        }
+        
+        /* Custom scrollbar for dark theme */
+        .sidebar::-webkit-scrollbar {
+            width: 8px;
+        }
+        .sidebar::-webkit-scrollbar-thumb {
+            background-color: var(--accent-color);
+            border-radius: 4px;
+        }
+        .sidebar::-webkit-scrollbar-track {
+            background-color: var(--secondary-color);
+        }
+
+    </style>
 </head>
-<body class="bg-gray-100 min-h-screen">
+<body class="min-h-screen p-4 sm:p-6 md:p-8">
 
-    <div id="message-box" class="message-box fixed top-4 right-4 z-50 p-3 rounded-lg shadow-xl hidden"></div>
-
-    <header class="bg-gray-900 text-white shadow-lg sticky top-0 z-10">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col md:flex-row justify-between items-center">
-            <h1 class="text-3xl font-extrabold tracking-tight mb-2 md:mb-0">
-                <span class="text-yellow-400">Vinyl</span> Archiver
+    <div id="app" class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <header class="text-center mb-8">
+            <h1 class="text-4xl sm:text-5xl font-extrabold text-white mb-2 tracking-tight">
+                <span style="color: var(--accent-color);">Vinyl</span> Archive
             </h1>
+            <p class="text-lg text-gray-400">The Complete Collection Catalog</p>
+        </header>
+
+        <!-- Main Layout: Sidebar (List) and Content (Detail) -->
+        <div class="flex flex-col lg:flex-row gap-6">
+
+            <!-- Sidebar: Album List & Search -->
+            <div class="lg:w-1/3 w-full">
+                <div class="card p-4 rounded-xl sidebar overflow-y-scroll flex flex-col">
+                    
+                    <!-- Search Input -->
+                    <div class="mb-4 sticky top-0 pt-1 pb-3 z-10" style="background-color: var(--secondary-color);">
+                        <input type="text" id="search-input" placeholder="Search by Artist, Album, or Genre..."
+                               class="w-full p-3 rounded-lg bg-gray-700 text-white placeholder-gray-400 focus:ring-2 focus:ring-accent-color focus:outline-none transition duration-150"
+                               oninput="handleSearch()">
+                    </div>
+
+                    <!-- Album List Container -->
+                    <div id="album-list" class="space-y-3">
+                        <!-- Album cards will be inserted here by JavaScript -->
+                        <div class="text-center p-8 text-gray-500">Initializing database connection...</div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Main Content Area: Detail View -->
+            <div class="lg:w-2/3 w-full">
+                <div id="detail-view" class="card p-6 rounded-xl flex items-center justify-center min-h-full" data-selected-id="undefined">
+                    <!-- Detail content will be inserted here by JavaScript -->
+                    <div class="text-center p-12">
+                        <svg class="w-16 h-16 mx-auto mb-4 text-accent-color" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v14m-6 3h6a2 2 0 002-2V5a2 2 0 00-2-2H9a2 2 0 00-2 2v14a2 2 0 002 2zm1-9h-2m-1 0h2v4h-2V10z"></path>
+                        </svg>
+                        <h2 class="text-2xl font-semibold mb-2">Select an Album</h2>
+                        <p class="text-gray-400">Use the list on the left to view album details, track listings, and archival notes.</p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+        
+        <!-- Status and Debug Info -->
+        <div class="mt-4 text-xs text-gray-600 text-center">
+             <p>User ID: <span id="user-id-display">Loading...</span> | App ID: <span id="app-id-display">Loading...</span></p>
+        </div>
+    </div>
+
+    <!-- JavaScript Logic -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, onSnapshot, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- 1. GLOBALS & DATA ---
+        let records = []; 
+        let db = null;
+        let auth = null;
+        let userId = 'loading';
+        let isAuthReady = false;
+
+        // Global variables provided by the Canvas environment
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        // Note: __firebase_config is a JSON string, so we must parse it.
+        const firebaseConfig = typeof __firebase_config !== 'undefined' && __firebase_config.length > 2 ? JSON.parse(__firebase_config) : {};
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        // Path to the public collection (shared data)
+        function getCollectionRef(dbInstance) {
+            // Using the public collection for a shared catalog view
+            // FIXED: Removed erroneous backslash before the backtick
+            return collection(dbInstance, `artifacts/${appId}/public/data/vinyl_catalog`);
+        }
+        
+        // --- 2. FIREBASE & AUTH SETUP (Mandatory for Persistence) ---
+        async function initializeFirebase() {
+            try {
+                // Set debug level for logs
+                setLogLevel('Debug');
+                
+                // CRITICAL DEBUG STEP: Log the config being used
+                console.log('Firebase Config Loaded:', firebaseConfig);
+
+                // Check if the config is valid before proceeding
+                if (!firebaseConfig.projectId) {
+                    throw new Error("Missing 'projectId'. Firebase configuration is incomplete.");
+                }
+                
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+                
+                document.getElementById('app-id-display').textContent = appId;
+
+
+                // Listen for Auth State Changes
+                onAuthStateChanged(auth, async (user) => {
+                    if (user) {
+                        userId = user.uid;
+                    } else {
+                        // Attempt sign-in if not authenticated
+                         if (initialAuthToken) {
+                            await signInWithCustomToken(auth, initialAuthToken);
+                        } else {
+                            await signInAnonymously(auth);
+                        }
+                        // Re-run onAuthStateChanged after sign-in attempt
+                        return; 
+                    }
+                    
+                    isAuthReady = true;
+                    document.getElementById('user-id-display').textContent = userId;
+                    console.log("Firebase Auth Ready. User ID:", userId);
+                    
+                    // Once Auth is ready, load the data
+                    loadRecords();
+                });
+                
+                // Initial check for custom token sign-in
+                if (initialAuthToken && !auth.currentUser) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else if (!auth.currentUser) {
+                    await signInAnonymously(auth);
+                }
+
+
+            } catch (error) {
+                console.error("Error initializing Firebase:", error);
+                // FIXED: Removed erroneous backslash before the backtick
+                document.getElementById('album-list').innerHTML = `<div class="p-4 text-red-400">Error setting up Firebase: ${error.message}. Please check the console for config details.</div>`;
+            }
+        }
+        
+        // Load data using Firestore (Real-time listener)
+        function loadRecords() {
+            if (!isAuthReady || !db) {
+                console.warn("Firestore not ready. Cannot load records.");
+                return;
+            }
+
+            const recordsRef = getCollectionRef(db);
             
-            <div class="flex items-center space-x-4 w-full md:w-auto">
-                <input type="text" id="search-input" placeholder="Search by Artist or Title..." 
-                       class="w-full md:w-80 p-2.5 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-yellow-500 focus:border-yellow-500 transition duration-150">
+            // Set up real-time listener
+            onSnapshot(recordsRef, (snapshot) => {
+                const newRecords = [];
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    newRecords.push({ id: doc.id, ...data });
+                });
+                // Sort records by artist name for consistent viewing
+                records = newRecords.sort((a, b) => (a.artist || "").localeCompare(b.artist || ""));
                 
-                <button id="upload-btn" title="Upload JSON Data"
-                        class="bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-bold py-2.5 px-4 rounded-lg shadow-md transition duration-150 transform hover:scale-105 flex items-center justify-center">
-                    <i class="fas fa-upload h-5 w-5 mr-1"></i>
-                    Upload
-                </button>
+                console.log("Records loaded:", records.length);
+                // Initial render or update based on search
+                handleSearch(); 
+
+                // Check if a record was previously selected and display it again
+                const detailView = document.getElementById('detail-view');
+                const selectedId = detailView.dataset.selectedId;
                 
-                <input type="file" id="json-file-input" accept=".json" class="hidden">
+                if (records.length > 0 && selectedId === 'undefined') {
+                    // Automatically select the first record if nothing is selected
+                    window.displayAlbumDetails(records[0].id);
+                } else if (selectedId !== 'undefined') {
+                    // Re-display the selected record if it still exists
+                    const selectedRecord = records.find(r => r.id === selectedId);
+                    if (selectedRecord) {
+                        window.displayAlbumDetails(selectedRecord.id);
+                    } else {
+                        // If the previously selected record was deleted, clear the detail view
+                         detailView.dataset.selectedId = 'undefined';
+                         // FIXED: Removed erroneous backslash before the backtick
+                         detailView.innerHTML = `
+                            <div class="text-center p-12">
+                                <svg class="w-16 h-16 mx-auto mb-4 text-accent-color" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v14m-6 3h6a2 2 0 002-2V5a2 2 0 00-2-2H9a2 2 0 00-2 2v14a2 2 0 002 2zm1-9h-2m-1 0h2v4h-2V10z"></path>
+                                </svg>
+                                <h2 class="text-2xl font-semibold mb-2">Select an Album</h2>
+                                <p class="text-gray-400">The previously selected record was removed.</p>
+                            </div>
+                         `;
+                    }
+                }
+            }, (error) => {
+                console.error("Error fetching documents: ", error);
+                // FIXED: Removed erroneous backslash before the backtick
+                document.getElementById('album-list').innerHTML = `<div class="p-4 text-red-400">Error loading data: ${error.message}</div>`;
+            });
+        }
 
-                <button id="filter-btn" title="Open Filters"
-                        class="bg-gray-700 hover:bg-gray-600 text-yellow-400 font-bold py-2.5 px-4 rounded-lg shadow-md transition duration-150 transform hover:scale-105">
-                    <i class="fas fa-filter h-5 w-5"></i>
-                </button>
-            </div>
-        </div>
-    </header>
+        // --- 3. RENDERING FUNCTIONS ---
 
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        function createAlbumCard(record) {
+            // Ensure condition displays correctly
+            const conditionText = record.condition || 'N/A';
+            let conditionClass = 'bg-gray-500'; // Default gray
+            if (conditionText.includes('Mint')) conditionClass = 'bg-green-600';
+            else if (conditionText.includes('Excellent')) conditionClass = 'bg-blue-600';
+            else if (conditionText.includes('Good') || conditionText.includes('Very Good')) conditionClass = 'bg-yellow-600';
+            else if (conditionText.includes('Fair')) conditionClass = 'bg-red-600';
+            
+            // FIXED: Removed erroneous backslash before the backtick
+            const cardHtml = `
+                <div id="record-${record.id}" 
+                     class="album-card p-4 rounded-lg card cursor-pointer flex items-center space-x-4 hover:bg-gray-700 active:ring-2 active:ring-accent-color transition duration-150"
+                     onclick="window.displayAlbumDetails('${record.id}')">
+                    <img src="${record.image || 'https://placehold.co/64x64/1a1a1a/e5e5e5?text=LP'}" 
+                         onerror="this.onerror=null; this.src='https://placehold.co/64x64/1a1a1a/e5e5e5?text=NO+IMG';" 
+                         alt="${record.title} cover" class="w-16 h-16 object-cover rounded-md shadow-lg">
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-semibold truncate text-white">${record.title}</p>
+                        <p class="text-xs text-gray-400 truncate">${record.artist} (${record.year || 'N/A'})</p>
+                    </div>
+                    <div class="text-xs font-medium text-white p-1 rounded-md ${conditionClass}">${conditionText}</div>
+                </div>
+            `;
+            return cardHtml;
+        }
         
-        <div id="filter-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 z-20 flex items-start justify-center pt-20">
-            <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-lg transform transition-all duration-300 scale-100">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-2xl font-bold text-gray-800">Advanced Filters</h2>
-                    <button id="close-filter-modal" class="text-gray-500 hover:text-gray-800 transition duration-150">
-                        <i class="fas fa-times h-6 w-6"></i>
-                    </button>
-                </div>
-                
-                <div class="space-y-4">
-                    <div>
-                        <label for="filter-format" class="block text-sm font-medium text-gray-700 mb-2">Record Format</label>
-                        <select id="filter-format" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-yellow-500 focus:border-yellow-500">
-                            <option value="">All Formats</option>
-                            <option value="LP">LP (33 1/3)</option>
-                            <option value="EP">EP (Extended Play)</option>
-                            <option value="Single">Single (45 RPM)</option>
-                            <option option="78">78 RPM</option>
-                        </select>
-                    </div>
+        window.renderAlbumList = function(data) {
+            const albumListContainer = document.getElementById('album-list');
+            albumListContainer.innerHTML = ''; // Clear existing list
 
-                    <div class="flex space-x-4">
-                        <div class="flex-1">
-                            <label for="filter-year-from" class="block text-sm font-medium text-gray-700 mb-2">Year From</label>
-                            <input type="number" id="filter-year-from" placeholder="e.g., 1970" 
-                                   class="w-full p-2 border border-gray-300 rounded-lg focus:ring-yellow-500 focus:border-yellow-500">
+            if (data.length === 0) {
+                // FIXED: Removed erroneous backslash before the backtick
+                albumListContainer.innerHTML = `<div class="text-center p-8 text-gray-500">No records found matching your search.</div>`;
+                return;
+            }
+
+            let htmlContent = '';
+            data.forEach(record => {
+                htmlContent += createAlbumCard(record);
+            });
+            albumListContainer.innerHTML = htmlContent;
+            
+            // Highlight the currently selected card
+            const selectedId = document.getElementById('detail-view').dataset.selectedId;
+            if (selectedId && selectedId !== 'undefined') {
+                // FIXED: Removed erroneous backslash before the backtick
+                const selectedCard = document.getElementById(`record-${selectedId}`);
+                if (selectedCard) {
+                    selectedCard.classList.add('bg-gray-700', 'ring-2', 'ring-accent-color');
+                }
+            }
+        }
+
+        window.displayAlbumDetails = function(recordId) {
+            const record = records.find(r => r.id === recordId);
+            const detailView = document.getElementById('detail-view');
+            
+            // Remove selection styling from all cards
+            document.querySelectorAll('.album-card').forEach(card => {
+                card.classList.remove('bg-gray-700', 'ring-2', 'ring-accent-color');
+            });
+
+            if (!record) {
+                // FIXED: Removed erroneous backslash before the backtick
+                detailView.innerHTML = `<div class="p-4 text-red-400">Record not found.</div>`;
+                detailView.dataset.selectedId = 'undefined';
+                return;
+            }
+
+            // Highlight the selected card
+            // FIXED: Removed erroneous backslash before the backtick
+            const selectedCard = document.getElementById(`record-${record.id}`);
+            if (selectedCard) {
+                selectedCard.classList.add('bg-gray-700', 'ring-2', 'ring-accent-color');
+                selectedCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+            
+            detailView.dataset.selectedId = record.id; // Store selected ID
+            
+            // Determine condition class
+            const conditionText = record.condition || 'N/A';
+            let conditionClass = 'bg-gray-500'; 
+            if (conditionText.includes('Mint')) conditionClass = 'bg-green-600';
+            else if (conditionText.includes('Excellent')) conditionClass = 'bg-blue-600';
+            else if (conditionText.includes('Good') || conditionText.includes('Very Good')) conditionClass = 'bg-yellow-600';
+            else if (conditionText.includes('Fair')) conditionClass = 'bg-red-600';
+
+            // Format the Track List
+            const tracksHtml = (record.tracks && Array.isArray(record.tracks) && record.tracks.length > 0) ? record.tracks.map((track, index) => 
+                // FIXED: Removed erroneous backslash before the backtick
+                `<li class="flex items-center space-x-2 text-gray-300">
+                    <span class="font-mono text-accent-color">${index + 1}.</span>
+                    <span class="flex-1">${track}</span>
+                </li>`
+            ).join('') : '<li class="text-gray-500">Track listing unavailable.</li>';
+            
+            // Construct the detail HTML
+            // FIXED: Removed erroneous backslash before the backtick
+            detailView.innerHTML = `
+                <div class="flex flex-col md:flex-row gap-6 w-full">
+                    <!-- Cover Image & Primary Info -->
+                    <div class="md:w-1/3 flex-shrink-0 text-center">
+                        <img src="${record.image || 'https://placehold.co/300x300/1a1a1a/e5e5e5?text=NO+IMAGE'}" 
+                             onerror="this.onerror=null; this.src='https://placehold.co/300x300/1a1a1a/e5e5e5?text=NO+IMAGE';" 
+                             alt="${record.title} cover" class="w-full h-auto object-cover rounded-xl shadow-2xl mx-auto mb-4 border-4 border-accent-color/50">
+                        
+                        <div class="text-left mt-4 p-4 bg-gray-700 rounded-lg shadow-inner">
+                            <h3 class="text-xl font-bold text-white mb-2">${record.title}</h3>
+                            <p class="text-gray-400 mb-4">${record.artist} (${record.year})</p>
+                            
+                            <div class="text-sm space-y-1">
+                                <p><span class="font-semibold text-accent-color">Genre:</span> ${record.genre || 'N/A'}</p>
+                                <p><span class="font-semibold text-accent-color">Condition:</span> 
+                                    <span class="font-bold p-1 rounded-md ${conditionClass} text-white text-xs">
+                                        ${conditionText}
+                                    </span>
+                                </p>
+                                <p><span class="font-semibold text-accent-color">Catalog ID:</span> ${record.id}</p>
+                            </div>
                         </div>
-                        <div class="flex-1">
-                            <label for="filter-year-to" class="block text-sm font-medium text-gray-700 mb-2">Year To</label>
-                            <input type="number" id="filter-year-to" placeholder="e.g., 1985" 
-                                   class="w-full p-2 border border-gray-300 rounded-lg focus:ring-yellow-500 focus:border-yellow-500">
-                        </div>
                     </div>
 
-                    <div>
-                        <button id="reset-filter-button" class="w-full bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg shadow-md transition duration-150 transform hover:scale-[1.01]">
-                            Reset Filters
-                        </button>
+                    <!-- Track Listing & Notes -->
+                    <div class="md:w-2/3">
+                        <h3 class="text-3xl font-bold text-white mb-4 border-b pb-2 border-accent-color">Track Listing</h3>
+                        <ul class="space-y-2 max-h-96 overflow-y-auto pr-4">
+                            ${tracksHtml}
+                        </ul>
+                        
+                        <h3 class="text-2xl font-bold text-white mt-8 mb-3 border-b pb-1 border-accent-color/70">Archival Notes</h3>
+                        <p class="text-gray-400 italic">
+                            ${record.notes || 'No specific archival notes have been recorded for this item.'}
+                        </p>
                     </div>
                 </div>
-
-                <div class="mt-6">
-                    <button id="apply-filter-button" class="w-full bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-bold py-3 px-4 rounded-lg shadow-md transition duration-150 transform hover:scale-105">
-                        Apply Filters
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <div id="loading-indicator" class="text-center py-10">
-            <i class="fas fa-circle-notch fa-spin h-8 w-8 text-yellow-500 mx-auto"></i>
-            <p class="mt-3 text-gray-600">Loading your collection...</p>
-        </div>
+            `;
+        }
         
-        <div id="album-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
-            </div>
+        // --- 4. SEARCH FUNCTIONALITY ---
 
-        <div class="mt-10 pt-5 border-t border-gray-300 text-center text-sm text-gray-500">
-            <p>Authenticated User ID: <span id="user-id-display" class="font-mono text-gray-700">Signing in...</span></p>
-        </div>
+        window.handleSearch = function() {
+            const searchTerm = document.getElementById('search-input').value.toLowerCase();
+            
+            const filteredRecords = records.filter(record => {
+                const artistMatch = record.artist && record.artist.toLowerCase().includes(searchTerm);
+                const titleMatch = record.title && record.title.toLowerCase().includes(searchTerm);
+                const genreMatch = record.genre && record.genre.toLowerCase().includes(searchTerm);
+                return artistMatch || titleMatch || genreMatch;
+            });
 
-    </main>
+            renderAlbumList(filteredRecords);
+        }
 
-    <script type="module" src="./app.js"></script>
-    
+        // --- 5. INITIALIZATION ---
+        window.addEventListener('load', initializeFirebase);
+
+    </script>
 </body>
 </html>
